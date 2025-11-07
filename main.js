@@ -1,5 +1,6 @@
 // ***********************************************
 // LOGIC SRS (LẶP LẠI NGẮT QUÃNG), PRELOADING VÀ XÓA CACHE
+// PHIÊN BẢN CÓ TẢI TRƯỚC PHIÊN ÂM
 // ***********************************************
 
 // --- Cài đặt SRS ---
@@ -108,8 +109,13 @@ function syncProgress() {
         if (!progress[word.id]) {
             progress[word.id] = {
                 level: 0, // Mới
-                nextReview: today // Học ngay hôm nay
+                nextReview: today, // Học ngay hôm nay
+                phonetic: null // (CẬP NHẬT) Thêm trường phonetic
             };
+            updated = true;
+        } else if (typeof progress[word.id].phonetic === 'undefined') {
+            // Cập nhật cho người dùng cũ (nếu có)
+            progress[word.id].phonetic = null;
             updated = true;
         }
     }
@@ -199,9 +205,9 @@ async function startNewRound() {
         return;
     }
     
-    // 2. TẢI TRƯỚC ÂM THANH (PRELOAD)
-    showLoader(true, "Đang chuẩn bị âm thanh..."); // Hiển thị loader
-    await preloadAudioForRound(currentWords);
+    // 2. TẢI TRƯỚC ÂM THANH VÀ PHIÊN ÂM (PRELOAD) (CẬP NHẬT)
+    showLoader(true, "Đang chuẩn bị dữ liệu..."); // Cập nhật text
+    await preloadDataForRound(currentWords); // Đổi tên hàm
     showLoader(false); // Ẩn loader khi xong
 
     // 3. Quyết định chế độ chơi (50/50)
@@ -209,7 +215,7 @@ async function startNewRound() {
     
     gameTitle.textContent = gameMode === 'audio-text' ? "Nghe và nối" : "Nối các cặp";
 
-    // 4. Tạo thẻ
+    // 4. Tạo thẻ (CẬP NHẬT)
     const leftItems = currentWords.map(word => ({
         id: word.id,
         text: gameMode === 'audio-text' ? `🔊` : word.english, // Chế độ nghe hoặc chế độ chữ
@@ -228,32 +234,66 @@ async function startNewRound() {
     updateProgress();
 }
 
-// Tạo một thẻ (card)
+// Tạo một thẻ (card) (ĐÃ CẬP NHẬT)
 function createCard(item, side) {
     const card = document.createElement('div');
     card.className = 'card';
-    card.textContent = item.text;
     card.dataset.id = item.id;
     card.dataset.side = side;
-    
+    card.dataset.word = item.word; // Luôn gán word để phát âm
+
     if (item.type === 'audio') {
+        // CHẾ ĐỘ AUDIO (Bên trái)
         card.classList.add('audio-card');
-        card.dataset.word = item.word; // Lưu từ tiếng Anh để phát âm
+        card.textContent = '🔊';
+    } else if (item.type === 'text' && side === 'left') {
+        // CHẾ ĐỘ TEXT (Bên trái) - Hiển thị Word + Phonetic
+        card.classList.add('text-audio-card'); // Class để nhận diện
+        
+        const wordPhonetic = progress[item.id]?.phonetic; // Lấy phiên âm đã lưu
+        
+        const cardContent = document.createElement('div');
+        cardContent.className = 'card-content';
+        
+        const wordEl = document.createElement('div');
+        wordEl.className = 'card-word';
+        wordEl.textContent = item.text; // item.text là word.english
+        cardContent.appendChild(wordEl);
+
+        // Chỉ hiển thị phiên âm nếu đã tải được
+        if (wordPhonetic) {
+            const phoneticEl = document.createElement('div');
+            phoneticEl.className = 'card-phonetic';
+            phoneticEl.textContent = wordPhonetic;
+            cardContent.appendChild(phoneticEl);
+        }
+        card.appendChild(cardContent);
+
+    } else {
+        // CHẾ ĐỘ TEXT (Bên phải - Tiếng Việt)
+        const cardContent = document.createElement('div');
+        cardContent.className = 'card-content';
+        const wordEl = document.createElement('div');
+        wordEl.className = 'card-word';
+        wordEl.textContent = item.text;
+        cardContent.appendChild(wordEl);
+        card.appendChild(cardContent);
     }
     
     card.addEventListener('click', handleCardClick);
     return card;
 }
 
-// Xử lý khi nhấn vào thẻ
+
+// Xử lý khi nhấn vào thẻ (ĐÃ CẬP NHẬT)
 function handleCardClick(event) {
     const selectedCard = event.currentTarget;
     if (selectedCard.classList.contains('disabled') || selectedCard.classList.contains('correct')) return;
 
     const side = selectedCard.dataset.side;
 
-    // Phát âm thanh nếu là chế độ nghe
-    if (gameMode === 'audio-text' && side === 'left') {
+    // (CẬP NHẬT) Phát âm thanh khi nhấn BẤT KỲ thẻ nào bên trái
+    if (side === 'left') {
         playAudio(selectedCard.dataset.word);
     }
 
@@ -377,18 +417,18 @@ function normalizeWord(word) {
     return word.trim().toLowerCase();
 }
 
-// Tải trước (preload) âm thanh cho màn chơi
-async function preloadAudioForRound(words) {
-    console.log(`Đang tải trước âm thanh cho ${words.length} từ...`);
+// (CẬP NHẬT) Tải trước (preload) dữ liệu (âm thanh VÀ phiên âm)
+async function preloadDataForRound(words) {
+    console.log(`Đang tải trước dữ liệu cho ${words.length} từ...`);
     const preloadPromises = words.map(word => {
         if (!word.english) return Promise.resolve();
-        // Gọi hàm fetchAndCacheAudio, nhưng không cần phát (shouldPlay = false)
-        return fetchAndCacheAudio(word.english, null, false); 
+        // Gọi hàm fetch, không phát (shouldPlay = false)
+        return fetchAndCacheWordData(word.english, word.id, null, false); 
     });
     
     try {
         await Promise.all(preloadPromises);
-        console.log("Tải trước âm thanh hoàn tất.");
+        console.log("Tải trước dữ liệu hoàn tất.");
     } catch (error) {
         console.warn("Có lỗi xảy ra trong khi tải trước, nhưng vẫn tiếp tục:", error);
     }
@@ -398,18 +438,31 @@ async function preloadAudioForRound(words) {
 async function playAudio(word) {
     if (!word) return;
     
-    // Tìm nút audio (nếu có)
+    // Tìm nút (audio hoặc text-audio)
     const audioButton = document.querySelector(`.card[data-word="${word}"][data-side="left"]`);
     if (audioButton) audioButton.classList.add('selected'); 
 
+    // Lấy ID từ `allWords` để tra cứu progress
+    const wordData = allWords.find(w => w.english === word);
+    if (!wordData) {
+        console.error(`Không tìm thấy wordData cho: ${word}`);
+        return;
+    }
+
     // Gọi hàm fetch (hoặc lấy từ cache) và PHÁT âm thanh (shouldPlay = true)
-    fetchAndCacheAudio(word, audioButton, true);
+    fetchAndCacheWordData(word, wordData.id, audioButton, true);
 }
 
-// HÀM MỚI: Lấy âm thanh (từ API hoặc Cache) và tùy chọn phát
-async function fetchAndCacheAudio(word, audioButtonElement, shouldPlay) {
+// (CẬP NHẬT) Lấy ÂM THANH và PHIÊN ÂM (từ API hoặc Cache)
+async function fetchAndCacheWordData(word, wordId, audioButtonElement, shouldPlay) {
     const normalizedWord = normalizeWord(word);
     if (!normalizedWord) return;
+
+    // 1. Kiểm tra xem đã có đủ dữ liệu chưa
+    const cache = await caches.open(AUDIO_CACHE_NAME);
+    const hasPhonetic = progress[wordId]?.phonetic; // Đã có phiên âm chưa?
+    
+    // (Chúng ta vẫn sẽ gọi API để kiểm tra audio, vì cache.match tốn thời gian)
 
     try {
         // Gọi API từ điển
@@ -418,30 +471,67 @@ async function fetchAndCacheAudio(word, audioButtonElement, shouldPlay) {
         
         const data = await response.json();
         
-        // Tìm file âm thanh trong kết quả
         let audioUrl = "";
+        let phoneticText = hasPhonetic ? progress[wordId].phonetic : null; // Giữ lại nếu đã có
+
         if (data[0] && data[0].phonetics) {
-            const phoneticWithAudio = data[0].phonetics.find(p => p.audio && p.audio !== "");
-            if (phoneticWithAudio) {
-                audioUrl = phoneticWithAudio.audio;
-                // Đảm bảo URL có https:
-                if (audioUrl.startsWith("//")) {
-                    audioUrl = "https:" + audioUrl;
+            // Ưu tiên tìm entry có cả audio và text
+            let phoneticData = data[0].phonetics.find(p => p.audio && p.audio !== "" && p.text);
+            
+            // Nếu không có, tìm entry chỉ có audio
+            if (!phoneticData) {
+                phoneticData = data[0].phonetics.find(p => p.audio && p.audio !== "");
+            }
+
+            // Nếu vẫn không có, tìm entry chỉ có text
+            if (!phoneticData && !hasPhonetic) {
+                const textOnlyPhonetic = data[0].phonetics.find(p => p.text);
+                if(textOnlyPhonetic) phoneticText = textOnlyPhonetic.text;
+            }
+
+            if (phoneticData) {
+                // TÌM PHIÊN ÂM (nếu chưa có)
+                if (!phoneticText && phoneticData.text) {
+                    phoneticText = phoneticData.text;
+                }
+                
+                // TÌM AUDIO URL
+                if(phoneticData.audio) {
+                    audioUrl = phoneticData.audio;
+                    if (audioUrl.startsWith("//")) {
+                        audioUrl = "https:" + audioUrl;
+                    }
+                }
+            }
+        }
+        
+        // Lưu phiên âm (nếu tìm thấy và chưa có)
+        if (phoneticText && !hasPhonetic) {
+            progress[wordId].phonetic = phoneticText;
+            saveProgress();
+            
+            // CẬP NHẬT GIAO DIỆN NGAY: Nếu thẻ đang hiển thị, cập nhật phiên âm
+            if (!shouldPlay && gameMode === 'text-text') {
+                const card = document.querySelector(`.card[data-id="${wordId}"][data-side="left"]`);
+                if (card && !card.querySelector('.card-phonetic')) {
+                    const phoneticEl = document.createElement('div');
+                    phoneticEl.className = 'card-phonetic';
+                    phoneticEl.textContent = phoneticText;
+                    card.querySelector('.card-content').appendChild(phoneticEl);
                 }
             }
         }
 
+
         if (audioUrl) {
-            const cache = await caches.open(AUDIO_CACHE_NAME);
+            // Xử lý cache và phát âm thanh (như cũ)
             let cachedResponse = await cache.match(audioUrl);
             let audioBlob;
 
             if (cachedResponse) {
-                // 1. CÓ CACHE: Lấy từ cache
-                console.log(`[Cache] Đã tìm thấy ${normalizedWord}.`);
+                if (shouldPlay) console.log(`[Cache] Đã tìm thấy ${normalizedWord}.`);
                 audioBlob = await cachedResponse.blob();
             } else {
-                // 2. KHÔNG CÓ CACHE: Tải, lưu vào cache
                 console.log(`[Network] Đang tải ${normalizedWord}, sẽ lưu vào cache...`);
                 const networkResponse = await fetch(audioUrl);
                 if (!networkResponse.ok) throw new Error('Không thể tải file MP3');
@@ -449,27 +539,28 @@ async function fetchAndCacheAudio(word, audioButtonElement, shouldPlay) {
                 audioBlob = await networkResponse.blob(); // Dùng bản gốc
             }
 
-            // 3. Quyết định có phát hay không
             if (shouldPlay) {
                 const objectUrl = URL.createObjectURL(audioBlob);
                 playAudioFromUrl(objectUrl, audioButtonElement);
             }
 
         } else {
-            console.warn(`Không tìm thấy audio URL cho từ: ${normalizedWord}`);
-            if (shouldPlay && audioButtonElement) {
-                // Báo lỗi trên nút (ví dụ: đổi text)
-                const originalText = audioButtonElement.textContent;
-                audioButtonElement.textContent = "Không có audio";
-                audioButtonElement.classList.remove('selected');
-                setTimeout(() => {
-                    audioButtonElement.textContent = originalText;
-                }, 1500);
+            // Không tìm thấy Audio URL
+            if (shouldPlay) { // Chỉ báo lỗi nếu người dùng nhấn nút
+                console.warn(`Không tìm thấy audio URL cho từ: ${normalizedWord}`);
+                if (audioButtonElement) {
+                    const originalHTML = audioButtonElement.innerHTML;
+                    audioButtonElement.innerHTML = "Không có audio";
+                    audioButtonElement.classList.remove('selected');
+                    setTimeout(() => {
+                        audioButtonElement.innerHTML = originalHTML;
+                    }, 1500);
+                }
             }
         }
 
     } catch (error) {
-        console.error(`Lỗi khi xử lý âm thanh cho ${word}:`, error);
+        console.error(`Lỗi khi xử lý dữ liệu cho ${word}:`, error);
         if (shouldPlay && audioButtonElement && audioButtonElement !== selectedLeft) {
             audioButtonElement.classList.remove('selected');
         }

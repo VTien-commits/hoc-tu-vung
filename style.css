@@ -133,15 +133,12 @@ header {
     background-color: var(--card-bg);
     border: 2px solid var(--border-color);
     border-radius: 12px;
-    padding: 15px;
-    font-size: 16px;
-    font-weight: 600;
-    text-align: center;
+    padding: 12px; /* Cập nhật padding */
     cursor: pointer;
     box-shadow: var(--shadow);
     transition: all 0.2s ease;
     user-select: none; /* Không cho chọn text */
-    min-height: 40px; /* Chiều cao tối thiểu */
+    min-height: 44px; /* Cập nhật chiều cao */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -178,10 +175,43 @@ header {
     cursor: not-allowed;
 }
 
+/* --- Cấu trúc thẻ mới (Word + Phonetic) --- */
+.card-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    text-align: center;
+}
+
+.card-word {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.card.selected .card-word {
+    color: var(--primary-color);
+}
+
+.card-phonetic {
+    font-size: 14px;
+    font-weight: 400;
+    color: #555;
+    font-style: italic;
+}
+
 .card.audio-card {
     font-size: 24px;
     color: var(--primary-color);
+    /* Thêm lại flex cho icon 🔊 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
+/* --- Kết thúc cấu trúc thẻ mới --- */
+
 
 /* --- Nút bấm --- */
 .action-button {
