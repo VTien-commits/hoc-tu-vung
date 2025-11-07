@@ -685,7 +685,18 @@ async function playAudio(word) {
 
 // (CẬP NHẬT) Lấy ÂM THANH và PHIÊN ÂM
 async function fetchAndCacheWordData(word, wordId, audioButtonElement, shouldPlay) {
-    const normalizedWord = normalizeWord(word);
+    // (MỚI) Xử lý từ ghép hoặc động từ bất quy tắc
+    let wordToLookup = word;
+    
+    // Nếu từ chứa dấu gạch ngang (go-went-gone) hoặc nhiều hơn 2 từ (eat ate eaten),
+    // chúng ta chỉ lấy từ đầu tiên để tra cứu âm thanh.
+    if (word.includes('-') || word.split(' ').length > 2) {
+        // Tách từ theo dấu gạch ngang hoặc dấu cách và lấy phần tử đầu tiên
+        wordToLookup = word.split(word.includes('-') ? '-' : ' ')[0].trim();
+    }
+    // "living room" (2 từ) vẫn sẽ được giữ nguyên và tra cứu đúng.
+    
+    const normalizedWord = normalizeWord(wordToLookup); // (CẬP NHẬT) Dùng từ đã xử lý
     if (!normalizedWord) return;
 
     const cache = await caches.open(AUDIO_CACHE_NAME);
