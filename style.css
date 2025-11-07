@@ -166,10 +166,18 @@ header {
     color: var(--incorrect-color);
     animation: shake 0.5s;
 }
+
 .card.disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
+
+/* (MỚI) Ghi đè lại độ mờ (opacity) khi thẻ bị sai */
+/* Điều này đảm bảo màu hồng/đỏ hiển thị rực rỡ */
+.card.incorrect.disabled {
+    opacity: 1;
+}
+
 .card-content {
     display: flex;
     flex-direction: column;
