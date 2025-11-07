@@ -552,18 +552,9 @@ async function fetchAndCacheWordData(word, wordId, audioButtonElement, shouldPla
             progress[wordId].phonetic = phoneticText;
             saveProgress();
             
-            // CẬP NHẬT GIAO DIỆN NGAY: Nếu thẻ đang hiển thị, cập nhật phiên âm
-            // (CẬP NHẬT) Chỉ cập nhật nếu đang ở chế độ 'phonetic-text'
-            if (gameMode === 'phonetic-text') {
-                const card = document.querySelector(`.card[data-id="${wordId}"][data-side="left"]`);
-                // Thêm kiểm tra card.querySelector('.card-content')
-                if (card && card.querySelector('.card-content') && !card.querySelector('.card-phonetic')) {
-                    const phoneticEl = document.createElement('div');
-                    phoneticEl.className = 'card-phonetic';
-                    phoneticEl.textContent = phoneticText;
-                    card.querySelector('.card-content').appendChild(phoneticEl);
-                }
-            }
+            // (ĐÃ XÓA) Khối code cập nhật giao diện (từ dòng 369-379) đã bị xóa
+            // vì createCard đã xử lý việc hiển thị phiên âm
+            // khi đọc từ 'progress' lúc khởi tạo thẻ.
         }
 
 
