@@ -15,12 +15,17 @@
     <div id="mode-selection-overlay" class="mode-overlay">
         <div class="mode-selection-box">
             <h2>Chọn kiểu chơi</h2>
-            <button id="mode-audio-button" class="mode-select-button">
+            
+            <!-- (MỚI) Trạng thái tải dữ liệu -->
+            <p id="loading-status" class="loading-status">Đang tải dữ liệu...</p>
+
+            <!-- (CẬP NHẬT) Thêm 'disabled' ban đầu -->
+            <button id="mode-audio-button" class="mode-select-button" disabled>
                 <span>🔊</span>
                 Nghe & Nối
                 <p>Nghe âm thanh và nối với nghĩa tiếng Việt.</p>
             </button>
-            <button id="mode-text-button" class="mode-select-button">
+            <button id="mode-text-button" class="mode-select-button" disabled>
                 <span>📖</span>
                 Đọc & Nối
                 <p>Đọc từ tiếng Anh (kèm phiên âm) và nối với nghĩa.</p>

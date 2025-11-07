@@ -319,6 +319,15 @@ header {
     font-size: 22px;
 }
 
+/* (MỚI) Kiểu cho trạng thái tải */
+#loading-status {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-color);
+    margin: -10px 0 0 0; /* Đặt giữa h2 và nút */
+    transition: color 0.3s;
+}
+
 .mode-select-button {
     background-color: var(--card-bg);
     border: 2px solid var(--border-color);
@@ -335,6 +344,22 @@ header {
     gap: 8px;
     color: var(--text-color);
 }
+
+/* (MỚI) Kiểu cho nút khi bị vô hiệu hóa */
+.mode-select-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: var(--border-color);
+}
+
+.mode-select-button:disabled:hover {
+    /* Hủy bỏ hiệu ứng hover khi bị vô hiệu hóa */
+    border-color: var(--border-color);
+    background-color: var(--border-color);
+    color: var(--text-color);
+    transform: none;
+}
+
 
 .mode-select-button:hover {
     border-color: var(--primary-color);

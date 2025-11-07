@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', initializeApp);
 
 async function initializeApp() {
     
-    // (MỚI) Gán giá trị cho DOM Elements (CHỈ CHẠY KHI DOM SẴN SÀNG)
+    // (CẬP NHẬT) 1. Gán giá trị cho DOM Elements
     gameContainer = document.getElementById('game-container');
     leftColumn = document.getElementById('left-column');
     rightColumn = document.getElementById('right-column');
@@ -57,8 +57,24 @@ async function initializeApp() {
     modeTextButton = document.getElementById('mode-text-button');
     header = document.querySelector('header');
     mainContent = document.querySelector('.main-container');
+    let loadingStatus = document.getElementById('loading-status'); // (MỚI)
 
-    // 1. Đăng ký Service Worker
+    // (CẬP NHẬT) 2. Gán tất cả sự kiện ngay lập tức
+    // Điều này đảm bảo các nút luôn hoạt động (nếu được bật)
+    if (clearCacheButton) {
+        clearCacheButton.addEventListener('click', clearAudioCache);
+    }
+    nextRoundButton.addEventListener('click', startNewRound);
+    if (modeAudioButton && modeTextButton) {
+        modeAudioButton.addEventListener('click', () => selectGameMode('audio-only'));
+        modeTextButton.addEventListener('click', () => selectGameMode('phonetic-text'));
+    } else {
+        if(loadingStatus) loadingStatus.textContent = "Lỗi nghiêm trọng (không tìm thấy nút).";
+        console.error("Lỗi nghiêm trọng: Không tìm thấy nút chọn chế độ.");
+    }
+
+
+    // 3. Đăng ký Service Worker
     if ('serviceWorker' in navigator) {
         try {
             await navigator.serviceWorker.register('sw.js');
@@ -68,13 +84,8 @@ async function initializeApp() {
         }
     }
 
-    // 2. Gán sự kiện cho nút "Xóa Cache"
-    if (clearCacheButton) {
-        clearCacheButton.addEventListener('click', clearAudioCache);
-    }
-
-    // 3. Lấy dữ liệu từ vựng và "trí nhớ"
-    showLoader(true, "Đang tải dữ liệu...");
+    // (CẬP NHẬT) 4. Lấy dữ liệu từ vựng và "trí nhớ"
+    // (XÓA) showLoader(true, ...); // Chúng ta dùng trạng thái mới
     try {
         // Tải kho từ vựng
         const response = await fetch('words.json');
@@ -84,34 +95,28 @@ async function initializeApp() {
         // Tải "trí nhớ"
         progress = loadProgress();
 
-        // Đồng bộ "trí nhớ" với kho từ vựng (cho trường hợp thêm từ mới)
+        // Đồng bộ "trí nhớ"
         syncProgress();
 
-        // Gán sự kiện cho nút (Màn tiếp theo)
-        nextRoundButton.addEventListener('click', startNewRound);
-
-        // (MỚI) Gán sự kiện cho nút chọn chế độ (Thêm kiểm tra)
-        if (modeAudioButton && modeTextButton) {
-            modeAudioButton.addEventListener('click', () => selectGameMode('audio-only'));
-            modeTextButton.addEventListener('click', () => selectGameMode('phonetic-text'));
-        } else {
-            console.error("Lỗi nghiêm trọng: Không tìm thấy nút chọn chế độ.");
+        // (MỚI) Cập nhật UI khi SẴN SÀNG
+        if(loadingStatus) {
+            loadingStatus.textContent = "Sẵn sàng! Hãy chọn chế độ.";
+            loadingStatus.style.color = "var(--correct-color)"; // Màu xanh
         }
+        // Bật các nút
+        modeAudioButton.disabled = false;
+        modeTextButton.disabled = false;
 
-
-        // (CẬP NHẬT) Không bắt đầu game ngay, chỉ ẩn loader
-        // Màn hình chọn chế độ đã hiển thị mặc định
-        showLoader(false);
 
     } catch (error) {
         console.error("Lỗi khi khởi động:", error);
-        // Hiển thị lỗi trên màn hình chọn chế độ nếu có thể
-        if(modeSelectionOverlay) {
-            modeSelectionOverlay.innerHTML = `<h2>Lỗi tải dữ liệu</h2><p>${error.message}</p><p>Vui lòng tải lại trang.</p>`;
-        } else {
-            gameTitle.textContent = "Lỗi tải dữ liệu";
+        
+        // (MỚI) Cập nhật UI khi LỖI
+        if(loadingStatus) {
+            loadingStatus.textContent = "Lỗi tải dữ liệu. Vui lòng tải lại trang.";
+            loadingStatus.style.color = "var(--incorrect-color)"; // Màu đỏ
         }
-        showLoader(false); // Ẩn loader nếu có lỗi
+        // Các nút vẫn bị vô hiệu hóa
     }
 }
 
