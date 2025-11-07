@@ -1,39 +1,41 @@
 // ***********************************************
-// LOGIC SRS (LẶP LẠI NGẮT QUÃNG), PRELOADING VÀ XÓA CACHE
-// PHIÊN BẢN CÓ 2 CHẾ ĐỘ (NGHE / ĐỌC)
+// LOGIC SRS (LẶP LẠI NGẮT QUÃNG) VÀ GAME
+// PHIÊN BẢN HYBRID (GOOGLE SHEETS + LOCALSTORAGE)
 // ***********************************************
 
-// --- Cài đặt SRS ---
-const PROGRESS_STORAGE_KEY = 'vocabAppProgress'; // Khóa lưu "trí nhớ"
-const AUDIO_CACHE_NAME = 'audio-cache-v1';
-const WORDS_PER_ROUND = 6; // Số từ mỗi màn
+// --- Cài đặt Chung ---
+// !!! QUAN TRỌNG: Dán URL Ứng dụng web Google Apps Script của bạn vào đây
+const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxdiM6OJv3_XHZi6Z4iDeW0r3e8cQXK-Oh3sHViRsfG5BR6R7zrHOEYkeggnQvXw9Ek/exec";
 
-// Khoảng thời gian lặp lại (theo level), tính bằng ngày
+const PROGRESS_STORAGE_KEY = 'vocabAppProgress';
+const AUDIO_CACHE_NAME = 'audio-cache-v1';
+const WORDS_PER_ROUND = 6;
+
+// --- Cài đặt SRS ---
 const SRS_LEVELS = {
-    0: 0,   // Mới học (sẽ ôn lại trong màn này)
-    1: 1,   // 1 ngày
-    2: 3,   // 3 ngày
-    3: 7,   // 1 tuần
-    4: 14,  // 2 tuần
-    5: 30,  // 1 tháng
-    6: 60   // 2 tháng (đã thuộc)
+    0: 0, 1: 1, 2: 3, 3: 7, 4: 14, 5: 30, 6: 60
 };
 const MAX_LEVEL = 6;
 
 // --- Biến toàn cục ---
-let allWords = []; // Kho từ vựng đầy đủ
-let progress = {}; // "Trí nhớ" về tiến độ học
-let currentWords = []; // 6 từ trong màn hiện tại
+let allWords = []; // Kho từ vựng đầy đủ (từ Google Sheet)
+let progress = {}; // "Trí nhớ" (luôn đọc từ localStorage)
+let currentWords = [];
 let selectedLeft = null;
 let selectedRight = null;
 let correctPairs = 0;
 let totalScore = 0;
-let gameMode = null; // (CẬP NHẬT) Sẽ được đặt khi người dùng chọn
+let gameMode = null;
+let selectedTopic = null; // (MỚI)
+let isSyncing = false; // (MỚI)
 
-// --- DOM Elements (CẬP NHẬT) ---
-// Chỉ khai báo 'let', chưa gán giá trị
-let gameContainer, leftColumn, rightColumn, progressBar, scoreDisplay, nextRoundButton, loader, loaderText, gameTitle, clearCacheButton;
+// --- DOM Elements ---
+let gameContainer, leftColumn, rightColumn, progressBar, scoreDisplay, nextRoundButton, loader, loaderText, gameTitle;
 let modeSelectionOverlay, modeAudioButton, modeTextButton, header, mainContent;
+let topicSelectionOverlay, topicList, topicBackButton; // (MỚI)
+let settingsModal, settingsButton, settingsCloseButton, homeButton; // (MỚI)
+let statsModal, statsButton, statsCloseButton, statsList; // (MỚI)
+let clearCacheButton; // (MỚI)
 
 
 // --- Khởi động ---
@@ -41,38 +43,11 @@ document.addEventListener('DOMContentLoaded', initializeApp);
 
 async function initializeApp() {
     
-    // (CẬP NHẬT) 1. Gán giá trị cho DOM Elements
-    gameContainer = document.getElementById('game-container');
-    leftColumn = document.getElementById('left-column');
-    rightColumn = document.getElementById('right-column');
-    progressBar = document.getElementById('progress-bar');
-    scoreDisplay = document.getElementById('score');
-    nextRoundButton = document.getElementById('next-round-button');
-    loader = document.getElementById('loader');
-    loaderText = document.getElementById('loader-text');
-    gameTitle = document.getElementById('game-title');
-    clearCacheButton = document.getElementById('clear-cache-button');
-    modeSelectionOverlay = document.getElementById('mode-selection-overlay');
-    modeAudioButton = document.getElementById('mode-audio-button');
-    modeTextButton = document.getElementById('mode-text-button');
-    header = document.querySelector('header');
-    mainContent = document.querySelector('.main-container');
-    let loadingStatus = document.getElementById('loading-status'); // (MỚI)
+    // 1. Gán giá trị cho DOM Elements
+    assignDomElements();
 
-    // (CẬP NHẬT) 2. Gán tất cả sự kiện ngay lập tức
-    // Điều này đảm bảo các nút luôn hoạt động (nếu được bật)
-    if (clearCacheButton) {
-        clearCacheButton.addEventListener('click', clearAudioCache);
-    }
-    nextRoundButton.addEventListener('click', startNewRound);
-    if (modeAudioButton && modeTextButton) {
-        modeAudioButton.addEventListener('click', () => selectGameMode('audio-only'));
-        modeTextButton.addEventListener('click', () => selectGameMode('phonetic-text'));
-    } else {
-        if(loadingStatus) loadingStatus.textContent = "Lỗi nghiêm trọng (không tìm thấy nút).";
-        console.error("Lỗi nghiêm trọng: Không tìm thấy nút chọn chế độ.");
-    }
-
+    // 2. Gán tất cả sự kiện
+    attachEventListeners();
 
     // 3. Đăng ký Service Worker
     if ('serviceWorker' in navigator) {
@@ -84,55 +59,154 @@ async function initializeApp() {
         }
     }
 
-    // (CẬP NHẬT) 4. Lấy dữ liệu từ vựng và "trí nhớ"
-    // (XÓA) showLoader(true, ...); // Chúng ta dùng trạng thái mới
+    // 4. Lấy dữ liệu
+    await loadData();
+}
+
+// (MỚI) Gán DOM
+function assignDomElements() {
+    gameContainer = document.getElementById('game-container');
+    leftColumn = document.getElementById('left-column');
+    rightColumn = document.getElementById('right-column');
+    progressBar = document.getElementById('progress-bar');
+    scoreDisplay = document.getElementById('score');
+    nextRoundButton = document.getElementById('next-round-button');
+    loader = document.getElementById('loader');
+    loaderText = document.getElementById('loader-text');
+    gameTitle = document.getElementById('game-title');
+    header = document.querySelector('header');
+    mainContent = document.querySelector('.main-container');
+    
+    // Màn hình 1: Chế độ
+    modeSelectionOverlay = document.getElementById('mode-selection-overlay');
+    modeAudioButton = document.getElementById('mode-audio-button');
+    modeTextButton = document.getElementById('mode-text-button');
+    
+    // Màn hình 2: Chủ đề
+    topicSelectionOverlay = document.getElementById('topic-selection-overlay');
+    topicList = document.getElementById('topic-list');
+    topicBackButton = document.getElementById('topic-back-button');
+
+    // Cài đặt
+    settingsButton = document.getElementById('settings-button');
+    settingsModal = document.getElementById('settings-modal');
+    settingsCloseButton = document.getElementById('settings-close-button');
+    homeButton = document.getElementById('home-button');
+    clearCacheButton = document.getElementById('clear-cache-button');
+
+    // Thống kê
+    statsButton = document.getElementById('stats-button');
+    statsModal = document.getElementById('stats-modal');
+    statsCloseButton = document.getElementById('stats-close-button');
+    statsList = document.getElementById('stats-list');
+}
+
+// (MỚI) Gán Sự kiện
+function attachEventListeners() {
+    // Màn hình 1: Chế độ
+    modeAudioButton.addEventListener('click', () => selectGameMode('audio-only'));
+    modeTextButton.addEventListener('click', () => selectGameMode('phonetic-text'));
+
+    // Màn hình 2: Chủ đề
+    topicBackButton.addEventListener('click', () => {
+        topicSelectionOverlay.style.display = 'none';
+        modeSelectionOverlay.style.display = 'flex';
+    });
+
+    // Header
+    homeButton.addEventListener('click', handleHomeButtonClick);
+    settingsButton.addEventListener('click', () => settingsModal.style.display = 'flex');
+
+    // Game
+    nextRoundButton.addEventListener('click', startNewRound);
+
+    // Modal Cài đặt
+    settingsCloseButton.addEventListener('click', () => settingsModal.style.display = 'none');
+    clearCacheButton.addEventListener('click', clearAudioCache);
+    statsButton.addEventListener('click', showStatistics);
+
+    // Modal Thống kê
+    statsCloseButton.addEventListener('click', () => statsModal.style.display = 'none');
+}
+
+// (MỚI) Tải dữ liệu từ Google Sheet và LocalStorage
+async function loadData() {
+    const loadingStatus = document.getElementById('loading-status');
+    
+    if (GOOGLE_APPS_SCRIPT_URL === 'DÁN_URL_GOOGLE_APPS_SCRIPT_CỦA_BẠN_VÀO_ĐÂY') {
+        loadingStatus.textContent = "Lỗi: URL Apps Script chưa được cài đặt.";
+        loadingStatus.style.color = "var(--incorrect-color)";
+        console.error("Vui lòng dán URL Google Apps Script vào biến GOOGLE_APPS_SCRIPT_URL trong main.js");
+        return;
+    }
+
     try {
-        // Tải kho từ vựng
-        const response = await fetch('words.json');
-        if (!response.ok) throw new Error('Không thể tải file words.json');
-        allWords = await response.json();
+        // 1. Tải kho từ vựng (từ Google Sheet)
+        const response = await fetch(GOOGLE_APPS_SCRIPT_URL);
+        const result = await response.json();
         
-        // Tải "trí nhớ"
+        if (!result.success) throw new Error(result.error);
+        allWords = result.data;
+        
+        // 2. Tải "trí nhớ" (từ LocalStorage)
         progress = loadProgress();
 
-        // Đồng bộ "trí nhớ"
-        syncProgress();
+        // 3. Đồng bộ "trí nhớ"
+        // (Kết hợp dữ liệu từ Sheet và LocalStorage)
+        syncProgress(allWords);
 
-        // (MỚI) Cập nhật UI khi SẴN SÀNG
-        if(loadingStatus) {
-            loadingStatus.textContent = "Sẵn sàng! Hãy chọn chế độ.";
-            loadingStatus.style.color = "var(--correct-color)"; // Màu xanh
-        }
-        // Bật các nút
+        // 4. Cập nhật UI khi SẴN SÀNG
+        loadingStatus.textContent = "Sẵn sàng! Hãy chọn chế độ.";
+        loadingStatus.style.color = "var(--correct-color)";
         modeAudioButton.disabled = false;
         modeTextButton.disabled = false;
 
-
     } catch (error) {
         console.error("Lỗi khi khởi động:", error);
-        
-        // (MỚI) Cập nhật UI khi LỖI
-        if(loadingStatus) {
-            loadingStatus.textContent = "Lỗi tải dữ liệu. Vui lòng tải lại trang.";
-            loadingStatus.style.color = "var(--incorrect-color)"; // Màu đỏ
-        }
-        // Các nút vẫn bị vô hiệu hóa
+        loadingStatus.textContent = "Lỗi tải dữ liệu. Vui lòng tải lại trang.";
+        loadingStatus.style.color = "var(--incorrect-color)";
     }
 }
 
-// (MỚI) Hàm chọn chế độ chơi và bắt đầu game
-function selectGameMode(mode) {
-    gameMode = mode;
+// (MỚI) Xử lý nút Home (Đồng bộ và Tải lại)
+async function handleHomeButtonClick() {
+    if (isSyncing) return; // Ngăn nhấn đúp
+    isSyncing = true;
     
-    // Ẩn màn hình chọn chế độ
-    modeSelectionOverlay.style.display = 'none';
+    showLoader(true, "Đang đồng bộ tiến độ...");
     
-    // Hiển thị giao diện game chính
-    header.style.display = 'flex';
-    mainContent.style.display = 'block';
+    try {
+        await syncProgressToSheet(); // Chờ đồng bộ xong
+        showLoader(true, "Đồng bộ thành công!");
+    } catch (error) {
+        console.error("Đồng bộ thất bại:", error);
+        showLoader(true, "Đồng bộ thất bại!");
+        // Dù thất bại vẫn tiếp tục
+    }
     
-    // Bắt đầu màn đầu tiên
-    startNewRound();
+    // Chờ 1 giây rồi tải lại trang
+    setTimeout(() => {
+        location.reload();
+    }, 1000);
+}
+
+// (MỚI) Đồng bộ LocalStorage lên Google Sheet
+async function syncProgressToSheet() {
+    console.log("Đang đồng bộ progress lên Google Sheet...");
+    
+    const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors', // Cần thiết khi làm việc với GAS ở chế độ "Bất kỳ ai"
+        cache: 'no-cache',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(progress) // Gửi toàn bộ "trí nhớ" lên
+    });
+    
+    // Vì dùng 'no-cors', chúng ta không thể đọc response
+    // Chúng ta sẽ giả định là thành công nếu không có lỗi mạng
+    console.log("Đã gửi yêu cầu đồng bộ.");
 }
 
 
@@ -144,29 +218,39 @@ function loadProgress() {
     return data ? JSON.parse(data) : {};
 }
 
-// Lưu "trí nhớ" vào localStorage
+// Lưu "trí nhớ" vào localStorage (CHỈ LƯU LOCAL)
 function saveProgress() {
     localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(progress));
 }
 
-// Đồng bộ "trí nhớ" (đảm bảo mọi từ trong words.json đều có trong "trí nhớ")
-function syncProgress() {
+// (CẬP NHẬT) Đồng bộ "trí nhớ" khi khởi động
+function syncProgress(sheetWords) {
     const today = getTodayString();
     let updated = false;
-    for (const word of allWords) {
-        if (!progress[word.id]) {
+    
+    sheetWords.forEach(word => {
+        const localData = progress[word.id];
+        
+        if (!localData) {
+            // 1. Từ chưa có trong localStorage
+            // -> Lấy dữ liệu (level, nextReview) từ Sheet
             progress[word.id] = {
-                level: 0, // Mới
-                nextReview: today, // Học ngay hôm nay
-                phonetic: null // (CẬP NHẬT) Thêm trường phonetic
+                level: word.level || 0,
+                nextReview: word.nextReview || today,
+                phonetic: null // Phiên âm sẽ được tải sau
             };
             updated = true;
-        } else if (typeof progress[word.id].phonetic === 'undefined') {
-            // Cập nhật cho người dùng cũ (nếu có)
-            progress[word.id].phonetic = null;
-            updated = true;
+        } else {
+            // 2. Từ đã có trong localStorage
+            // (localStorage luôn ưu tiên)
+            // Đảm bảo trường 'phonetic' tồn tại
+            if (typeof localData.phonetic === 'undefined') {
+                localData.phonetic = null;
+                updated = true;
+            }
         }
-    }
+    });
+    
     if (updated) saveProgress();
 }
 
@@ -183,69 +267,116 @@ function getNextReviewDate(level) {
     return date.toISOString().split('T')[0];
 }
 
-// Lấy danh sách từ cho màn mới (LOGIC MỚI)
+// (CẬP NHẬT) Lấy danh sách từ (theo CHỦ ĐỀ)
 function getWordsToReview(count = WORDS_PER_ROUND) {
     const today = getTodayString();
     
-    // 1. Ưu tiên từ cần ôn tập (đã đến hạn)
-    const reviewQueue = allWords
-        .filter(word => progress[word.id].nextReview <= today)
-        .sort(() => Math.random() - 0.5); // Xáo trộn hàng chờ ôn tập
+    // 1. Lọc theo chủ đề đã chọn
+    const filteredWords = (selectedTopic && selectedTopic !== 'Tất cả')
+        ? allWords.filter(word => word.topic === selectedTopic)
+        : allWords;
 
-    // 2. Nếu không đủ, lấy thêm từ mới (level 0)
-    const newQueue = allWords
+    // 2. Ưu tiên từ cần ôn tập (đã đến hạn)
+    const reviewQueue = filteredWords
+        .filter(word => progress[word.id].nextReview <= today)
+        .sort(() => Math.random() - 0.5);
+
+    // 3. Nếu không đủ, lấy thêm từ mới (level 0)
+    const newQueue = filteredWords
         .filter(word => progress[word.id].level === 0 && !reviewQueue.find(w => w.id === word.id))
         .sort(() => Math.random() - 0.5);
 
-    // 3. Kết hợp lại
+    // 4. Kết hợp lại
     let wordsForRound = [...reviewQueue, ...newQueue];
 
-    // 4. Nếu vẫn không đủ (ví dụ đã học hết), lấy từ bất kỳ (trừ từ vừa học)
+    // 5. Nếu vẫn không đủ, lấy từ bất kỳ (trong chủ đề đó)
     if (wordsForRound.length < count) {
-        const extraWords = allWords
+        const extraWords = filteredWords
             .filter(word => !wordsForRound.find(w => w.id === word.id))
             .sort(() => Math.random() - 0.5);
         wordsForRound = [...wordsForRound, ...extraWords];
     }
 
-    return wordsForRound.slice(0, count); // Đảm bảo luôn trả về đúng số lượng
+    return wordsForRound.slice(0, count);
 }
 
-// Cập nhật tiến độ của một từ (LOGIC MỚI)
+// Cập nhật tiến độ (CHỈ CẬP NHẬT LOCALSTORAGE)
 function updateWordProgress(wordId, isCorrect) {
-    if (!progress[wordId]) return; // Từ không tồn tại
+    if (!progress[wordId]) return;
 
     let currentLevel = progress[wordId].level;
 
     if (isCorrect) {
-        // Trả lời đúng
         currentLevel = Math.min(currentLevel + 1, MAX_LEVEL);
     } else {
-        // Trả lời sai
-        currentLevel = Math.max(currentLevel - 1, 0); // Giảm level, nhưng không xuống dưới 0
+        currentLevel = Math.max(currentLevel - 1, 0);
     }
 
     progress[wordId].level = currentLevel;
     progress[wordId].nextReview = getNextReviewDate(currentLevel);
     
-    saveProgress();
+    saveProgress(); // Chỉ lưu local
 }
 
 
-// --- Logic Game (Đã cập nhật) ---
+// --- Logic Game ---
 
-// Bắt đầu màn chơi mới (ĐÃ CẬP NHẬT)
+// (CẬP NHẬT) Bước 1: Chọn chế độ
+function selectGameMode(mode) {
+    gameMode = mode;
+    
+    // Ẩn màn hình chọn chế độ
+    modeSelectionOverlay.style.display = 'none';
+    
+    // (MỚI) Hiển thị màn hình chọn chủ đề
+    showTopicSelection();
+}
+
+// (MỚI) Bước 2: Hiển thị chọn chủ đề
+function showTopicSelection() {
+    // Lấy các chủ đề duy nhất
+    const topics = [...new Set(allWords.map(word => word.topic || 'Khác'))];
+    topics.sort();
+    
+    topicList.innerHTML = ''; // Xóa danh sách cũ
+    
+    // Thêm nút "Tất cả"
+    const allButton = document.createElement('button');
+    allButton.className = 'action-button';
+    allButton.textContent = 'Tất cả chủ đề';
+    allButton.addEventListener('click', () => selectTopic('Tất cả'));
+    topicList.appendChild(allButton);
+    
+    // Thêm các nút chủ đề khác
+    topics.forEach(topic => {
+        const topicButton = document.createElement('button');
+        topicButton.className = 'action-button secondary-button';
+        topicButton.textContent = topic;
+        topicButton.addEventListener('click', () => selectTopic(topic));
+        topicList.appendChild(topicButton);
+    });
+    
+    topicSelectionOverlay.style.display = 'flex';
+}
+
+// (MỚI) Bước 3: Chọn chủ đề và bắt đầu
+function selectTopic(topic) {
+    selectedTopic = topic;
+    
+    // Ẩn màn hình chủ đề
+    topicSelectionOverlay.style.display = 'none';
+
+    // Hiển thị giao diện game chính
+    header.style.display = 'flex';
+    mainContent.style.display = 'block';
+    
+    // Bắt đầu màn đầu tiên
+    startNewRound();
+}
+
+
+// Bắt đầu màn chơi mới
 async function startNewRound() {
-    // (MỚI) Kiểm tra nếu chưa chọn chế độ thì không làm gì cả
-    if (!gameMode) {
-        console.error("Lỗi: startNewRound() được gọi khi chưa chọn gameMode.");
-        // Hiển thị lại màn hình chọn
-        modeSelectionOverlay.style.display = 'flex';
-        header.style.display = 'none';
-        mainContent.style.display = 'none';
-        return;
-    }
-
     showLoader(false);
     nextRoundButton.style.display = 'none';
     gameContainer.style.opacity = 1;
@@ -255,30 +386,28 @@ async function startNewRound() {
     selectedRight = null;
     correctPairs = 0;
 
-    // 1. Lấy từ theo logic SRS
+    // 1. Lấy từ (đã lọc theo chủ đề)
     currentWords = getWordsToReview(WORDS_PER_ROUND); 
     
     if (currentWords.length === 0) {
-        gameTitle.textContent = "Bạn đã học hết từ!";
+        gameTitle.textContent = "Bạn đã học hết chủ đề này!";
         return;
     }
     
-    // 2. TẢI TRƯỚC ÂM THANH VÀ PHIÊN ÂM (PRELOAD)
-    showLoader(true, "Đang chuẩn bị dữ liệu..."); // Cập nhật text
-    await preloadDataForRound(currentWords); // Đổi tên hàm
-    showLoader(false); // Ẩn loader khi xong
+    // 2. TẢI TRƯỚC ÂM THANH VÀ PHIÊN ÂM
+    showLoader(true, "Đang chuẩn bị dữ liệu...");
+    await preloadDataForRound(currentWords);
+    showLoader(false);
 
-    // 3. (CẬP NHẬT) Quyết định chế độ chơi
-    // Đã xóa dòng: gameMode = Math.random() < 0.5 ? 'audio-only' : 'phonetic-text';
-    
-    gameTitle.textContent = gameMode === 'audio-only' ? "Nghe và nối" : "Đọc và nối"; // Cập nhật tiêu đề
+    // 3. Cập nhật Tiêu đề
+    gameTitle.textContent = `${selectedTopic} (${gameMode === 'audio-only' ? 'Nghe' : 'Đọc'})`;
 
-    // 4. Tạo thẻ (Logic này giữ nguyên, đã dựa vào gameMode)
+    // 4. Tạo thẻ
     const leftItems = currentWords.map(word => ({
         id: word.id,
-        text: gameMode === 'audio-only' ? `🔊` : word.english, // Kiểu 1: Icon, Kiểu 2: Chữ
-        word: word.english, // Dùng để tra cứu audio
-        type: gameMode // 'audio-only' hoặc 'phonetic-text'
+        text: gameMode === 'audio-only' ? `🔊` : word.english,
+        word: word.english,
+        type: gameMode
     }));
     const rightItems = currentWords.map(word => ({
         id: word.id,
@@ -292,33 +421,30 @@ async function startNewRound() {
     updateProgress();
 }
 
-// Tạo một thẻ (card) (ĐÃ CẬP NHẬT)
+// Tạo một thẻ (card)
 function createCard(item, side) {
     const card = document.createElement('div');
     card.className = 'card';
     card.dataset.id = item.id;
     card.dataset.side = side;
-    card.dataset.word = item.word; // Luôn gán word để phát âm
+    card.dataset.word = item.word;
 
     if (item.type === 'audio-only') {
-        // (CẬP NHẬT) CHẾ ĐỘ AUDIO (Bên trái)
+        // CHẾ ĐỘ AUDIO (Bên trái)
         card.classList.add('audio-card');
         card.textContent = '🔊';
     } else if (item.type === 'phonetic-text' && side === 'left') {
-        // (CẬP NHẬT) CHẾ ĐỘ TEXT (Bên trái) - Hiển thị Word + Phonetic
-        card.classList.add('text-audio-card'); // Class để nhận diện
-        
-        const wordPhonetic = progress[item.id]?.phonetic; // Lấy phiên âm đã lưu
+        // CHẾ ĐỘ TEXT (Bên trái) - Hiển thị Word + Phonetic
+        card.classList.add('text-audio-card');
+        const wordPhonetic = progress[item.id]?.phonetic;
         
         const cardContent = document.createElement('div');
         cardContent.className = 'card-content';
-        
         const wordEl = document.createElement('div');
         wordEl.className = 'card-word';
-        wordEl.textContent = item.text; // item.text là word.english
+        wordEl.textContent = item.text;
         cardContent.appendChild(wordEl);
 
-        // Chỉ hiển thị phiên âm nếu đã tải được
         if (wordPhonetic) {
             const phoneticEl = document.createElement('div');
             phoneticEl.className = 'card-phonetic';
@@ -343,19 +469,15 @@ function createCard(item, side) {
 }
 
 
-// Xử lý khi nhấn vào thẻ (ĐÃ CẬP NHẬT)
+// Xử lý khi nhấn vào thẻ
 function handleCardClick(event) {
+    // ... (Giữ nguyên logic) ...
     const selectedCard = event.currentTarget;
     if (selectedCard.classList.contains('disabled') || selectedCard.classList.contains('correct')) return;
-
     const side = selectedCard.dataset.side;
-
-    // (CẬP NHẬT) Phát âm thanh khi nhấn BẤT KỲ thẻ nào bên trái
     if (side === 'left') {
         playAudio(selectedCard.dataset.word);
     }
-
-    // Hủy chọn nếu nhấn lại
     if (side === 'left' && selectedCard === selectedLeft) {
         selectedLeft.classList.remove('selected');
         selectedLeft = null;
@@ -366,8 +488,6 @@ function handleCardClick(event) {
         selectedRight = null;
         return;
     }
-
-    // Chọn thẻ
     selectedCard.classList.add('selected');
     if (side === 'left') {
         if (selectedLeft) selectedLeft.classList.remove('selected');
@@ -376,47 +496,33 @@ function handleCardClick(event) {
         if (selectedRight) selectedRight.classList.remove('selected');
         selectedRight = selectedCard;
     }
-
-    // Kiểm tra nếu đã chọn đủ 2 thẻ
     if (selectedLeft && selectedRight) {
         checkMatch();
     }
 }
 
-// Kiểm tra sự tương ứng (ĐÃ CẬP NHẬT)
+// Kiểm tra sự tương ứng
 function checkMatch() {
+    // ... (Giữ nguyên logic) ...
     const isMatch = selectedLeft.dataset.id === selectedRight.dataset.id;
-    const wordId = selectedLeft.dataset.id; // Lấy ID của từ
-
-    // Vô hiệu hóa 2 thẻ
+    const wordId = selectedLeft.dataset.id;
     selectedLeft.classList.add('disabled');
     selectedRight.classList.add('disabled');
-
     if (isMatch) {
-        // ĐÚNG
         selectedLeft.classList.add('correct');
         selectedRight.classList.add('correct');
         correctPairs++;
         totalScore += 10;
-        
-        // Cập nhật tiến độ SRS (Đúng)
-        updateWordProgress(wordId, true);
-
-        // Hoàn thành màn
+        updateWordProgress(wordId, true); // Cập nhật local
         if (correctPairs === currentWords.length) {
             gameContainer.style.opacity = 0.5;
             nextRoundButton.style.display = 'block';
         }
     } else {
-        // SAI
         selectedLeft.classList.add('incorrect');
         selectedRight.classList.add('incorrect');
-        totalScore = Math.max(0, totalScore - 5); // Trừ điểm
-
-        // Cập nhật tiến độ SRS (Sai)
-        updateWordProgress(wordId, false);
-
-        // Xóa trạng thái sau 1 giây
+        totalScore = Math.max(0, totalScore - 5);
+        updateWordProgress(wordId, false); // Cập nhật local
         setTimeout(() => {
             selectedLeft.classList.remove('incorrect', 'selected', 'disabled');
             selectedRight.classList.remove('incorrect', 'selected', 'disabled');
@@ -424,13 +530,10 @@ function checkMatch() {
             selectedRight = null;
         }, 1000);
     }
-
-    // Reset nếu ĐÚNG
     if (isMatch) {
         selectedLeft = null;
         selectedRight = null;
     }
-
     updateProgress();
 }
 
@@ -441,176 +544,158 @@ function updateProgress() {
     scoreDisplay.textContent = totalScore;
 }
 
-// --- Các hàm hỗ trợ (Đã cập nhật) ---
+// --- (MỚI) Logic Cài đặt & Thống kê ---
 
-// HÀM MỚI: Xóa cache âm thanh theo yêu cầu
+// Hiển thị Thống kê
+function showStatistics() {
+    statsList.innerHTML = ''; // Xóa cũ
+    
+    // 1. Lấy dữ liệu từ allWords và progress (localStorage)
+    const statsData = allWords.map(word => {
+        const wordProgress = progress[word.id] || { level: 0 };
+        return {
+            english: word.english,
+            level: wordProgress.level
+        };
+    });
+    
+    // 2. Sắp xếp (Level cao nhất -> thấp nhất)
+    statsData.sort((a, b) => b.level - a.level);
+    
+    // 3. Hiển thị
+    statsData.forEach(item => {
+        const itemEl = document.createElement('div');
+        itemEl.className = 'stat-item';
+        
+        const wordEl = document.createElement('span');
+        wordEl.className = 'stat-word';
+        wordEl.textContent = item.english;
+        
+        const levelEl = document.createElement('span');
+        levelEl.className = `stat-level stat-level-${item.level}`;
+        levelEl.textContent = `Level ${item.level}`;
+        
+        itemEl.appendChild(wordEl);
+        itemEl.appendChild(levelEl);
+        statsList.appendChild(itemEl);
+    });
+    
+    statsModal.style.display = 'flex';
+}
+
+// Xóa cache âm thanh theo yêu cầu
 async function clearAudioCache() {
-    console.log('Đang xóa cache âm thanh theo yêu cầu...');
-    showLoader(true, "Đang xóa cache âm thanh..."); // Hiển thị thông báo
+    console.log('Đang xóa cache âm thanh...');
+    showLoader(true, "Đang xóa cache âm thanh...");
     try {
-        await caches.delete(AUDIO_CACHE_NAME); // Xóa cache
-        console.log('Đã xóa cache âm thanh thành công.');
-        
-        // Mở lại cache (rỗng) để sẵn sàng cho lần tải tiếp theo
-        await caches.open(AUDIO_CACHE_NAME); 
-        
-        showLoader(true, "Đã xóa xong!"); // Thông báo thành công
-
-        // Ẩn loader sau 1.5 giây
-        setTimeout(() => {
-            showLoader(false);
-        }, 1500); 
+        await caches.delete(AUDIO_CACHE_NAME);
+        await caches.open(AUDIO_CACHE_NAME); // Mở lại cache rỗng
+        showLoader(true, "Đã xóa xong!");
     } catch (err) {
         console.error('Lỗi khi xóa cache âm thanh:', err);
         showLoader(true, "Xóa cache thất bại!");
-        setTimeout(() => {
-            showLoader(false);
-        }, 2000);
     }
+    setTimeout(() => showLoader(false), 1500);
 }
 
-// Chuẩn hóa từ (để tra cứu API)
+
+// --- Các hàm hỗ trợ (Audio & API) ---
+
+// Chuẩn hóa từ
 function normalizeWord(word) {
     if (!word) return "";
     return word.trim().toLowerCase();
 }
 
-// (CẬP NHẬT) Tải trước (preload) dữ liệu (âm thanh VÀ phiên âm)
+// Tải trước (preload) dữ liệu
 async function preloadDataForRound(words) {
-    console.log(`Đang tải trước dữ liệu cho ${words.length} từ...`);
     const preloadPromises = words.map(word => {
         if (!word.english) return Promise.resolve();
-        // Gọi hàm fetch, không phát (shouldPlay = false)
         return fetchAndCacheWordData(word.english, word.id, null, false); 
     });
-    
     try {
-        // (CẬP NHẬT) Sử dụng Promise.allSettled để đảm bảo nó luôn tiếp tục
-        // ngay cả khi một số API tra cứu từ bị lỗi (ví dụ: 404).
         await Promise.allSettled(preloadPromises);
-        console.log("Tải trước dữ liệu hoàn tất (bất kể lỗi).");
     } catch (error) {
-        // Mặc dù allSettled hiếm khi ném lỗi, chúng ta vẫn giữ lại
-        console.warn("Có lỗi xảy ra trong khi tải trước, nhưng vẫn tiếp tục:", error);
+        console.warn("Lỗi khi tải trước, nhưng vẫn tiếp tục:", error);
     }
 }
 
-// Hàm gọi API Âm thanh (ĐÃ CẬP NHẬT)
+// Hàm gọi API Âm thanh
 async function playAudio(word) {
     if (!word) return;
-    
-    // Tìm nút (audio hoặc text-audio)
     const audioButton = document.querySelector(`.card[data-word="${word}"][data-side="left"]`);
     if (audioButton) audioButton.classList.add('selected'); 
 
-    // Lấy ID từ `allWords` để tra cứu progress
     const wordData = allWords.find(w => w.english === word);
-    if (!wordData) {
-        console.error(`Không tìm thấy wordData cho: ${word}`);
-        return;
-    }
+    if (!wordData) return;
 
-    // Gọi hàm fetch (hoặc lấy từ cache) và PHÁT âm thanh (shouldPlay = true)
     fetchAndCacheWordData(word, wordData.id, audioButton, true);
 }
 
-// (CẬP NHẬT) Lấy ÂM THANH và PHIÊN ÂM (từ API hoặc Cache)
+// Lấy ÂM THANH và PHIÊN ÂM
 async function fetchAndCacheWordData(word, wordId, audioButtonElement, shouldPlay) {
     const normalizedWord = normalizeWord(word);
     if (!normalizedWord) return;
 
-    // 1. Kiểm tra xem đã có đủ dữ liệu chưa
     const cache = await caches.open(AUDIO_CACHE_NAME);
-    const hasPhonetic = progress[wordId]?.phonetic; // Đã có phiên âm chưa?
+    const hasPhonetic = progress[wordId]?.phonetic;
     
     try {
-        // Gọi API từ điển
         const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${normalizedWord}`);
         if (!response.ok) throw new Error('Không tìm thấy từ (404)');
         
         const data = await response.json();
-        
         let audioUrl = "";
-        let phoneticText = hasPhonetic ? progress[wordId].phonetic : null; // Giữ lại nếu đã có
+        let phoneticText = hasPhonetic ? progress[wordId].phonetic : null;
 
         if (data[0] && data[0].phonetics) {
-            // Ưu tiên tìm entry có cả audio và text
-            let phoneticData = data[0].phonetics.find(p => p.audio && p.audio !== "" && p.text);
+            let phoneticData = data[0].phonetics.find(p => p.audio && p.audio !== "" && p.text) ||
+                               data[0].phonetics.find(p => p.audio && p.audio !== "");
             
-            // Nếu không có, tìm entry chỉ có audio
-            if (!phoneticData) {
-                phoneticData = data[0].phonetics.find(p => p.audio && p.audio !== "");
-            }
-
-            // Nếu vẫn không có, tìm entry chỉ có text
             if (!phoneticData && !hasPhonetic) {
                 const textOnlyPhonetic = data[0].phonetics.find(p => p.text);
                 if(textOnlyPhonetic) phoneticText = textOnlyPhonetic.text;
             }
 
             if (phoneticData) {
-                // TÌM PHIÊN ÂM (nếu chưa có)
-                if (!phoneticText && phoneticData.text) {
-                    phoneticText = phoneticData.text;
-                }
-                
-                // TÌM AUDIO URL
-                if(phoneticData.audio) {
-                    audioUrl = phoneticData.audio;
-                    if (audioUrl.startsWith("//")) {
-                        audioUrl = "https:" + audioUrl;
-                    }
-                }
+                if (!phoneticText && phoneticData.text) phoneticText = phoneticData.text;
+                if(phoneticData.audio) audioUrl = phoneticData.audio.startsWith("//") ? "https:" + phoneticData.audio : phoneticData.audio;
             }
         }
         
-        // Lưu phiên âm (nếu tìm thấy và chưa có)
         if (phoneticText && !hasPhonetic) {
             progress[wordId].phonetic = phoneticText;
-            saveProgress();
-            
-            // (ĐÃ XÓA) Khối code cập nhật giao diện (từ dòng 369-379) đã bị xóa
-            // vì createCard đã xử lý việc hiển thị phiên âm
-            // khi đọc từ 'progress' lúc khởi tạo thẻ.
+            saveProgress(); // Lưu phonetic vào local
         }
 
-
         if (audioUrl) {
-            // Xử lý cache và phát âm thanh (như cũ)
             let cachedResponse = await cache.match(audioUrl);
             let audioBlob;
-
             if (cachedResponse) {
                 if (shouldPlay) console.log(`[Cache] Đã tìm thấy ${normalizedWord}.`);
                 audioBlob = await cachedResponse.blob();
             } else {
-                console.log(`[Network] Đang tải ${normalizedWord}, sẽ lưu vào cache...`);
+                console.log(`[Network] Đang tải ${normalizedWord}...`);
                 const networkResponse = await fetch(audioUrl);
                 if (!networkResponse.ok) throw new Error('Không thể tải file MP3');
-                await cache.put(audioUrl, networkResponse.clone()); // Lưu bản sao
-                audioBlob = await networkResponse.blob(); // Dùng bản gốc
+                await cache.put(audioUrl, networkResponse.clone());
+                audioBlob = await networkResponse.blob();
             }
-
             if (shouldPlay) {
                 const objectUrl = URL.createObjectURL(audioBlob);
                 playAudioFromUrl(objectUrl, audioButtonElement);
             }
-
         } else {
-            // Không tìm thấy Audio URL
-            if (shouldPlay) { // Chỉ báo lỗi nếu người dùng nhấn nút
-                console.warn(`Không tìm thấy audio URL cho từ: ${normalizedWord}`);
+            if (shouldPlay) {
+                console.warn(`Không tìm thấy audio URL cho: ${normalizedWord}`);
                 if (audioButtonElement) {
                     const originalHTML = audioButtonElement.innerHTML;
                     audioButtonElement.innerHTML = "Không có audio";
                     audioButtonElement.classList.remove('selected');
-                    setTimeout(() => {
-                        audioButtonElement.innerHTML = originalHTML;
-                    }, 1500);
+                    setTimeout(() => { audioButtonElement.innerHTML = originalHTML; }, 1500);
                 }
             }
         }
-
     } catch (error) {
         console.error(`Lỗi khi xử lý dữ liệu cho ${word}:`, error);
         if (shouldPlay && audioButtonElement && audioButtonElement !== selectedLeft) {
@@ -620,19 +705,15 @@ async function fetchAndCacheWordData(word, wordId, audioButtonElement, shouldPla
 }
 
 
-// Hàm helper phát audio (có callback khi hết)
+// Hàm helper phát audio
 function playAudioFromUrl(url, audioButton) {
     const audio = new Audio(url);
-    
-    // Khi phát xong, bỏ chọn nút
     audio.onended = () => {
         if (audioButton && audioButton !== selectedLeft) {
             audioButton.classList.remove('selected');
         }
-        URL.revokeObjectURL(url); // Giải phóng bộ nhớ
+        URL.revokeObjectURL(url);
     };
-    
-    // Xử lý lỗi
     audio.onerror = () => {
         console.error("Lỗi khi phát file audio.");
         if (audioButton && audioButton !== selectedLeft) {
@@ -640,7 +721,6 @@ function playAudioFromUrl(url, audioButton) {
         }
         URL.revokeObjectURL(url);
     };
-
     audio.play();
 }
 
