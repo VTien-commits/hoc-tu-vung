@@ -5,7 +5,7 @@
 
 // --- Cài đặt Chung ---
 // !!! QUAN TRỌNG: Dán URL Ứng dụng web Google Apps Script của bạn vào đây
-const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxdiM6OJv3_XHZi6Z4iDeW0r3e8cQXK-Oh3sHViRsfG5BR6R7zrHOEYkeggnQvXw9Ek/exec";
+const GOOGLE_APPS_SCRIPT_URL = 'DÁN_URL_GOOGLE_APPS_SCRIPT_CỦA_BẠN_VÀO_ĐÂY'; 
 
 const PROGRESS_STORAGE_KEY = 'vocabAppProgress';
 const AUDIO_CACHE_NAME = 'audio-cache-v1';

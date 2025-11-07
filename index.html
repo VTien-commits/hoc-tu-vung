@@ -11,15 +11,12 @@
 </head>
 <body>
 
-    <!-- (MỚI) Màn hình chọn chế độ chơi -->
+    <!-- Màn hình 1: Chọn Chế độ chơi -->
     <div id="mode-selection-overlay" class="mode-overlay">
         <div class="mode-selection-box">
             <h2>Chọn kiểu chơi</h2>
-            
-            <!-- (MỚI) Trạng thái tải dữ liệu -->
             <p id="loading-status" class="loading-status">Đang tải dữ liệu...</p>
 
-            <!-- (CẬP NHẬT) Thêm 'disabled' ban đầu -->
             <button id="mode-audio-button" class="mode-select-button" disabled>
                 <span>🔊</span>
                 Nghe & Nối
@@ -33,14 +30,26 @@
         </div>
     </div>
 
-    <!-- (CẬP NHẬT) Ẩn ban đầu -->
-    <header style="display: none;">
-        <h1 id="game-title">Đang tải...</h1>
+    <!-- Màn hình 2: Chọn Chủ đề (MỚI) -->
+    <div id="topic-selection-overlay" class="mode-overlay" style="display: none;">
+        <div class="mode-selection-box">
+            <h2>Chọn chủ đề</h2>
+            <div id="topic-list" class="topic-list-container">
+                <!-- Các nút chủ đề sẽ được JS chèn vào đây -->
+            </div>
+            <button id="topic-back-button" class="action-button secondary-button">Quay lại</button>
+        </div>
+    </div>
 
-        <!-- Nút Xóa Cache file âm thanh -->
-        <button id="clear-cache-button" title="Xóa toàn bộ file âm thanh đã lưu">
-            Xóa Cache Audio
-        </button>
+    <!-- Màn hình 3: Giao diện game chính -->
+    <header style="display: none;">
+        <!-- (MỚI) Nút Home (Thoát) -->
+        <button id="home-button" class="header-button" title="Về trang chủ (Đồng bộ)">🏠</button>
+        
+        <h1 id="game-title">Đang tải...</h1>
+        
+        <!-- (MỚI) Nút Cài đặt -->
+        <button id="settings-button" class="header-button" title="Cài đặt">⚙️</button>
 
         <div class="score-container">
             <span>Điểm</span>
@@ -48,20 +57,46 @@
         </div>
     </header>
 
-    <!-- (CẬP NHẬT) Ẩn ban đầu -->
     <main class="main-container" style="display: none;">
         <div class="progress-bar-container">
             <div id="progress-bar"></div>
         </div>
-
         <div id="game-container" class="game-container">
             <div id="left-column" class="column"></div>
             <div id="right-column" class="column"></div>
         </div>
-
         <button id="next-round-button" class="action-button" style="display: none;">Màn tiếp theo</button>
     </main>
 
+    <!-- (MỚI) Modal Cài đặt -->
+    <div id="settings-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <h2>Cài đặt</h2>
+            <button id="stats-button" class="action-button">Thống kê Từ vựng</button>
+            <button id="clear-cache-button" class="action-button secondary-button">Xóa Cache Audio</button>
+            
+            <!-- Tạm thời vô hiệu hóa tính năng upload -->
+            <label for="upload-excel" class="action-button disabled-button" title="Tính năng đang phát triển">
+                Thêm từ (Excel)
+            </label>
+            <input type="file" id="upload-excel" accept=".xlsx, .xls" style="display: none;">
+            
+            <button id="settings-close-button" class="action-button modal-close-button">Đóng</button>
+        </div>
+    </div>
+
+    <!-- (MỚI) Modal Thống kê -->
+    <div id="stats-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content large">
+            <h2>Thống kê Từ vựng</h2>
+            <div id="stats-list" class="stats-list-container">
+                <!-- Thống kê sẽ được JS chèn vào đây -->
+            </div>
+            <button id="stats-close-button" class="action-button modal-close-button">Đóng</button>
+        </div>
+    </div>
+
+    <!-- Loader (Chung) -->
     <div id="loader" class="loader-overlay" style="display: none;">
         <div class="loader-content">
             <div class="spinner"></div>

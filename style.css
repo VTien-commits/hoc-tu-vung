@@ -12,6 +12,7 @@
     --border-color: #d1d9e0;
     --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --warning-color: #f39c12;
 }
 
 /* --- Cơ bản --- */
@@ -26,7 +27,7 @@ body {
     align-items: center;
     justify-content: flex-start;
     min-height: 100vh;
-    -webkit-tap-highlight-color: transparent; /* Tắt highlight khi nhấn trên mobile */
+    -webkit-tap-highlight-color: transparent;
 }
 
 /* --- Header --- */
@@ -39,39 +40,42 @@ header {
     justify-content: space-between;
     align-items: center;
     border-bottom: 2px solid var(--border-color);
-    flex-wrap: wrap; /* Cho phép rớt hàng trên màn hình nhỏ */
+    flex-wrap: nowrap; /* Ngăn rớt hàng */
+}
+
+/* (MỚI) Nút trên Header (Home, Settings) */
+.header-button {
+    background: none;
+    border: none;
+    font-size: 24px; /* To hơn */
+    padding: 5px;
+    cursor: pointer;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+.header-button:hover {
+    background-color: var(--bg-color);
 }
 
 #game-title {
     font-size: 18px;
     font-weight: 700;
     color: var(--primary-color);
-    margin: 5px 10px;
+    margin: 0;
+    flex-grow: 1; /* Cho phép co giãn */
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-/* --- Nút Xóa Cache --- */
-#clear-cache-button {
-    background-color: #616161; /* Màu xám tối */
-    color: white;
-    border: none;
-    border-radius: 8px;
-    padding: 8px 12px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    transition: background-color 0.2s;
-    margin: 5px 10px; /* Thêm margin */
-}
-
-#clear-cache-button:hover {
-    background-color: #424242;
-}
-
-#clear-cache-button:active {
-    transform: translateY(1px);
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-}
+/* (ĐÃ BỎ) Nút Xóa Cache cũ */
+#clear-cache-button { display: none; }
 
 .score-container {
     display: flex;
@@ -82,7 +86,9 @@ header {
     border-radius: 8px;
     padding: 5px 15px;
     font-weight: 700;
-    margin: 5px 10px;
+    margin: 0;
+    min-width: 60px; /* Đảm bảo chiều rộng tối thiểu */
+    box-sizing: border-box;
 }
 
 #score {
@@ -92,12 +98,12 @@ header {
 /* --- Main content --- */
 .main-container {
     width: 100%;
-    max-width: 600px; /* Giới hạn chiều rộng trên máy tính bảng/PC */
+    max-width: 600px;
     padding: 20px;
     box-sizing: border-box;
 }
 
-/* --- Thanh tiến trình --- */
+/* ... (Giữ nguyên .progress-bar-container, #progress-bar, .game-container, .column, .card, .card-content, .card-word, .card-phonetic, .card.audio-card) ... */
 .progress-bar-container {
     width: 100%;
     background-color: var(--border-color);
@@ -106,7 +112,6 @@ header {
     margin-bottom: 20px;
     overflow: hidden;
 }
-
 #progress-bar {
     width: 0%;
     height: 100%;
@@ -114,47 +119,40 @@ header {
     border-radius: 10px;
     transition: width 0.3s ease-in-out;
 }
-
-/* --- Game --- */
 .game-container {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 15px;
     width: 100%;
 }
-
 .column {
     display: flex;
     flex-direction: column;
     gap: 15px;
 }
-
 .card {
     background-color: var(--card-bg);
     border: 2px solid var(--border-color);
     border-radius: 12px;
-    padding: 12px; /* Cập nhật padding */
+    padding: 12px;
     cursor: pointer;
     box-shadow: var(--shadow);
     transition: all 0.2s ease;
-    user-select: none; /* Không cho chọn text */
-    min-height: 44px; /* Cập nhật chiều cao */
+    user-select: none;
+    min-height: 44px;
     display: flex;
     align-items: center;
     justify-content: center;
 }
-
 .card:not(.disabled):hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
 }
-
 .card.selected {
     border-color: var(--primary-color);
     background-color: var(--primary-light);
     color: var(--primary-color);
 }
-
 .card.correct {
     border-color: var(--correct-color);
     background-color: var(--correct-light);
@@ -162,20 +160,16 @@ header {
     opacity: 0.7;
     cursor: not-allowed;
 }
-
 .card.incorrect {
     border-color: var(--incorrect-color);
     background-color: var(--incorrect-light);
     color: var(--incorrect-color);
     animation: shake 0.5s;
 }
-
 .card.disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
-
-/* --- Cấu trúc thẻ mới (Word + Phonetic) --- */
 .card-content {
     display: flex;
     flex-direction: column;
@@ -184,36 +178,29 @@ header {
     gap: 2px;
     text-align: center;
 }
-
 .card-word {
     font-size: 16px;
     font-weight: 600;
     color: var(--text-color);
 }
-
 .card.selected .card-word {
     color: var(--primary-color);
 }
-
 .card-phonetic {
     font-size: 14px;
     font-weight: 400;
     color: #555;
     font-style: italic;
 }
-
 .card.audio-card {
     font-size: 24px;
     color: var(--primary-color);
-    /* Thêm lại flex cho icon 🔊 */
     display: flex;
     align-items: center;
     justify-content: center;
 }
-/* --- Kết thúc cấu trúc thẻ mới --- */
 
-
-/* --- Nút bấm --- */
+/* --- Nút bấm (Chung) --- */
 .action-button {
     width: 100%;
     background-color: var(--primary-color);
@@ -227,13 +214,34 @@ header {
     margin-top: 20px;
     box-shadow: 0 4px 10px rgba(74, 144, 226, 0.3);
     transition: background-color 0.2s;
+    box-sizing: border-box; /* (MỚI) */
 }
-
 .action-button:hover {
     background-color: #3a7ac8;
 }
 
-/* --- Loader --- */
+/* (MỚI) Nút phụ (Màu xám) */
+.action-button.secondary-button {
+    background-color: #6c757d;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+.action-button.secondary-button:hover {
+    background-color: #5a6268;
+}
+
+/* (MỚI) Nút bị vô hiệu hóa */
+.action-button.disabled-button {
+    background-color: var(--border-color);
+    color: #999;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+.action-button.disabled-button:hover {
+    background-color: var(--border-color);
+}
+
+
+/* --- Loader (Chung) --- */
 .loader-overlay {
     position: fixed;
     top: 0;
@@ -247,7 +255,6 @@ header {
     z-index: 1000;
     backdrop-filter: blur(4px);
 }
-
 .loader-content {
     background-color: var(--card-bg);
     padding: 20px 30px;
@@ -257,13 +264,11 @@ header {
     align-items: center;
     gap: 15px;
 }
-
 #loader-text {
     font-size: 16px;
     font-weight: 600;
     color: var(--text-color);
 }
-
 .spinner {
     width: 24px;
     height: 24px;
@@ -279,19 +284,18 @@ header {
     25% { transform: translateX(-5px); }
     75% { transform: translateX(5px); }
 }
-
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
 
-/* --- (MỚI) Màn hình chọn chế độ --- */
+/* --- Màn hình chọn chế độ / Chọn Chủ đề --- */
 .mode-overlay {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: var(--bg-color); /* Nền đồng bộ */
+    background-color: var(--bg-color);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -299,7 +303,6 @@ header {
     padding: 20px;
     box-sizing: border-box;
 }
-
 .mode-selection-box {
     background-color: var(--card-bg);
     padding: 30px 25px;
@@ -312,22 +315,18 @@ header {
     gap: 20px;
     text-align: center;
 }
-
 .mode-selection-box h2 {
     margin: 0 0 10px 0;
     color: var(--primary-color);
     font-size: 22px;
 }
-
-/* (MỚI) Kiểu cho trạng thái tải */
 #loading-status {
     font-size: 16px;
     font-weight: 600;
     color: var(--text-color);
-    margin: -10px 0 0 0; /* Đặt giữa h2 và nút */
+    margin: -10px 0 0 0;
     transition: color 0.3s;
 }
-
 .mode-select-button {
     background-color: var(--card-bg);
     border: 2px solid var(--border-color);
@@ -344,34 +343,26 @@ header {
     gap: 8px;
     color: var(--text-color);
 }
-
-/* (MỚI) Kiểu cho nút khi bị vô hiệu hóa */
 .mode-select-button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
     background-color: var(--border-color);
 }
-
 .mode-select-button:disabled:hover {
-    /* Hủy bỏ hiệu ứng hover khi bị vô hiệu hóa */
     border-color: var(--border-color);
     background-color: var(--border-color);
     color: var(--text-color);
     transform: none;
 }
-
-
 .mode-select-button:hover {
     border-color: var(--primary-color);
     background-color: var(--primary-light);
     color: var(--primary-color);
     transform: translateY(-2px);
 }
-
 .mode-select-button span {
     font-size: 28px;
 }
-
 .mode-select-button p {
     font-size: 14px;
     font-weight: 400;
@@ -379,7 +370,102 @@ header {
     margin: 0;
     line-height: 1.4;
 }
-
 .mode-select-button:hover p {
     color: var(--primary-color);
 }
+
+/* (MỚI) Danh sách chủ đề */
+.topic-list-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+/* Nút chủ đề dùng lại .action-button */
+
+/* --- (MỚI) Modal (Cài đặt, Thống kê) --- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5); /* Nền mờ */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1100;
+    padding: 20px;
+    box-sizing: border-box;
+    backdrop-filter: blur(4px);
+}
+.modal-content {
+    background-color: var(--card-bg);
+    padding: 25px;
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    width: 100%;
+    max-width: 400px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px; /* Giảm gap */
+    text-align: center;
+}
+.modal-content.large {
+    max-width: 600px; /* Rộng hơn cho Thống kê */
+}
+.modal-content h2 {
+    margin: 0 0 10px 0;
+    color: var(--primary-color);
+    font-size: 22px;
+}
+/* Nút trong Modal (Cài đặt) */
+.modal-content .action-button {
+    margin-top: 5px; /* Giảm margin */
+}
+.modal-close-button {
+    margin-top: 15px;
+    background-color: var(--incorrect-color); /* Nút Đóng màu đỏ */
+}
+.modal-close-button:hover {
+    background-color: #c0392b;
+}
+
+/* (MỚI) Khung Thống kê */
+.stats-list-container {
+    max-height: 60vh;
+    overflow-y: auto;
+    text-align: left;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    border-bottom: 1px solid var(--border-color);
+}
+.stat-item:last-child {
+    border-bottom: none;
+}
+.stat-word {
+    font-weight: 600;
+    font-size: 16px;
+}
+.stat-level {
+    font-weight: 700;
+    font-size: 14px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    color: white;
+}
+/* Màu theo Level */
+.stat-level-0 { background-color: #777; }
+.stat-level-1 { background-color: var(--warning-color); }
+.stat-level-2 { background-color: var(--primary-color); }
+.stat-level-3 { background-color: var(--primary-color); }
+.stat-level-4 { background-color: var(--correct-color); }
+.stat-level-5 { background-color: var(--correct-color); }
+.stat-level-6 { background-color: var(--correct-color); }

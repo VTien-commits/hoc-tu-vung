@@ -2,101 +2,121 @@
   {
     "id": "w1",
     "english": "kitchen",
-    "vietnamese": "phòng bếp"
+    "vietnamese": "phòng bếp",
+    "topic": "Ngôi nhà"
   },
   {
     "id": "w2",
     "english": "living room",
-    "vietnamese": "phòng khách"
+    "vietnamese": "phòng khách",
+    "topic": "Ngôi nhà"
   },
   {
     "id": "w3",
     "english": "beautiful",
-    "vietnamese": "đẹp"
+    "vietnamese": "đẹp",
+    "topic": "Tính từ"
   },
   {
     "id": "w4",
     "english": "apartment",
-    "vietnamese": "căn hộ"
+    "vietnamese": "căn hộ",
+    "topic": "Ngôi nhà"
   },
   {
     "id": "w5",
     "english": "store",
-    "vietnamese": "cửa hàng"
+    "vietnamese": "cửa hàng",
+    "topic": "Địa điểm"
   },
   {
     "id": "w6",
     "english": "sofa",
-    "vietnamese": "ghế sofa"
+    "vietnamese": "ghế sofa",
+    "topic": "Ngôi nhà"
   },
   {
     "id": "w7",
     "english": "house",
-    "vietnamese": "ngôi nhà"
+    "vietnamese": "ngôi nhà",
+    "topic": "Ngôi nhà"
   },
   {
     "id": "w8",
     "english": "computer",
-    "vietnamese": "máy vi tính"
+    "vietnamese": "máy vi tính",
+    "topic": "Công nghệ"
   },
   {
     "id": "w9",
     "english": "developer",
-    "vietnamese": "lập trình viên"
+    "vietnamese": "lập trình viên",
+    "topic": "Công nghệ"
   },
   {
     "id": "w10",
     "english": "application",
-    "vietnamese": "ứng dụng"
+    "vietnamese": "ứng dụng",
+    "topic": "Công nghệ"
   },
   {
     "id": "w11",
     "english": "learn",
-    "vietnamese": "học"
+    "vietnamese": "học",
+    "topic": "Chung"
   },
   {
     "id": "w12",
     "english": "vocabulary",
-    "vietnamese": "từ vựng"
+    "vietnamese": "từ vựng",
+    "topic": "Chung"
   },
   {
     "id": "w13",
     "english": "memory",
-    "vietnamese": "trí nhớ"
+    "vietnamese": "trí nhớ",
+    "topic": "Chung"
   },
   {
     "id": "w14",
     "english": "system",
-    "vietnamese": "hệ thống"
+    "vietnamese": "hệ thống",
+    "topic": "Công nghệ"
   },
   {
     "id": "w15",
     "english": "audio",
-    "vietnamese": "âm thanh"
+    "vietnamese": "âm thanh",
+    "topic": "Công nghệ"
   },
   {
     "id": "w16",
     "english": "button",
-    "vietnamese": "nút bấm"
+    "vietnamese": "nút bấm",
+    "topic": "Công nghệ"
   },
   {
     "id": "w17",
     "english": "cache",
-    "vietnamese": "bộ nhớ đệm"
+    "vietnamese": "bộ nhớ đệm",
+    "topic": "Công nghệ"
   },
   {
     "id": "w18",
     "english": "correct",
-    "vietnamese": "chính xác"
+    "vietnamese": "chính xác",
+    "topic": "Tính từ"
   },
   {
     "id": "w19",
     "english": "incorrect",
-    "vietnamese": "không chính xác"
+    "vietnamese": "không chính xác",
+    "topic": "Tính từ"
   },
   {
     "id": "w20",
     "english": "family",
-    "vietnamese": "gia đình"
+    "vietnamese": "gia đình",
+    "topic": "Chung"
   }
 ]
