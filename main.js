@@ -480,9 +480,12 @@ async function preloadDataForRound(words) {
     });
     
     try {
-        await Promise.all(preloadPromises);
-        console.log("Tải trước dữ liệu hoàn tất.");
+        // (CẬP NHẬT) Sử dụng Promise.allSettled để đảm bảo nó luôn tiếp tục
+        // ngay cả khi một số API tra cứu từ bị lỗi (ví dụ: 404).
+        await Promise.allSettled(preloadPromises);
+        console.log("Tải trước dữ liệu hoàn tất (bất kể lỗi).");
     } catch (error) {
+        // Mặc dù allSettled hiếm khi ném lỗi, chúng ta vẫn giữ lại
         console.warn("Có lỗi xảy ra trong khi tải trước, nhưng vẫn tiếp tục:", error);
     }
 }
