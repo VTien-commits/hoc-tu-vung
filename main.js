@@ -30,30 +30,34 @@ let correctPairs = 0;
 let totalScore = 0;
 let gameMode = null; // (CẬP NHẬT) Sẽ được đặt khi người dùng chọn
 
-// --- DOM Elements ---
-const gameContainer = document.getElementById('game-container');
-const leftColumn = document.getElementById('left-column');
-const rightColumn = document.getElementById('right-column');
-const progressBar = document.getElementById('progress-bar');
-const scoreDisplay = document.getElementById('score');
-const nextRoundButton = document.getElementById('next-round-button');
-const loader = document.getElementById('loader');
-const loaderText = document.getElementById('loader-text');
-const gameTitle = document.getElementById('game-title');
-const clearCacheButton = document.getElementById('clear-cache-button');
-
-// (MỚI) DOM Elements cho chọn chế độ
-const modeSelectionOverlay = document.getElementById('mode-selection-overlay');
-const modeAudioButton = document.getElementById('mode-audio-button');
-const modeTextButton = document.getElementById('mode-text-button');
-const header = document.querySelector('header');
-const mainContent = document.querySelector('.main-container');
+// --- DOM Elements (CẬP NHẬT) ---
+// Chỉ khai báo 'let', chưa gán giá trị
+let gameContainer, leftColumn, rightColumn, progressBar, scoreDisplay, nextRoundButton, loader, loaderText, gameTitle, clearCacheButton;
+let modeSelectionOverlay, modeAudioButton, modeTextButton, header, mainContent;
 
 
 // --- Khởi động ---
 document.addEventListener('DOMContentLoaded', initializeApp);
 
 async function initializeApp() {
+    
+    // (MỚI) Gán giá trị cho DOM Elements (CHỈ CHẠY KHI DOM SẴN SÀNG)
+    gameContainer = document.getElementById('game-container');
+    leftColumn = document.getElementById('left-column');
+    rightColumn = document.getElementById('right-column');
+    progressBar = document.getElementById('progress-bar');
+    scoreDisplay = document.getElementById('score');
+    nextRoundButton = document.getElementById('next-round-button');
+    loader = document.getElementById('loader');
+    loaderText = document.getElementById('loader-text');
+    gameTitle = document.getElementById('game-title');
+    clearCacheButton = document.getElementById('clear-cache-button');
+    modeSelectionOverlay = document.getElementById('mode-selection-overlay');
+    modeAudioButton = document.getElementById('mode-audio-button');
+    modeTextButton = document.getElementById('mode-text-button');
+    header = document.querySelector('header');
+    mainContent = document.querySelector('.main-container');
+
     // 1. Đăng ký Service Worker
     if ('serviceWorker' in navigator) {
         try {
@@ -86,9 +90,14 @@ async function initializeApp() {
         // Gán sự kiện cho nút (Màn tiếp theo)
         nextRoundButton.addEventListener('click', startNewRound);
 
-        // (MỚI) Gán sự kiện cho nút chọn chế độ
-        modeAudioButton.addEventListener('click', () => selectGameMode('audio-only'));
-        modeTextButton.addEventListener('click', () => selectGameMode('phonetic-text'));
+        // (MỚI) Gán sự kiện cho nút chọn chế độ (Thêm kiểm tra)
+        if (modeAudioButton && modeTextButton) {
+            modeAudioButton.addEventListener('click', () => selectGameMode('audio-only'));
+            modeTextButton.addEventListener('click', () => selectGameMode('phonetic-text'));
+        } else {
+            console.error("Lỗi nghiêm trọng: Không tìm thấy nút chọn chế độ.");
+        }
+
 
         // (CẬP NHẬT) Không bắt đầu game ngay, chỉ ẩn loader
         // Màn hình chọn chế độ đã hiển thị mặc định
