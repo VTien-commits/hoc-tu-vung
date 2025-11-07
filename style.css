@@ -62,6 +62,13 @@ header {
     background-color: var(--bg-color);
 }
 
+/* (MỚI) Div giữ chỗ cho nút cài đặt đã bị di chuyển */
+.header-button-placeholder {
+    width: 40px;
+    height: 40px;
+    padding: 5px;
+}
+
 #game-title {
     font-size: 18px;
     font-weight: 700;
@@ -454,7 +461,15 @@ header {
     align-items: center;
     padding: 12px 15px;
     border-bottom: 1px solid var(--border-color);
+    cursor: pointer; /* (MỚI) Thêm con trỏ */
+    transition: background-color 0.2s; /* (MỚI) Thêm hiệu ứng hover */
 }
+
+/* (MỚI) Thêm hiệu ứng hover cho mục thống kê */
+.stat-item:hover {
+    background-color: var(--primary-light);
+}
+
 .stat-item:last-child {
     border-bottom: none;
 }

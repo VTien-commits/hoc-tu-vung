@@ -111,6 +111,8 @@ function addEventListeners() {
     // Màn hình 1: Chọn chế độ
     modeAudioButton.addEventListener('click', () => selectGameMode('audio-only'));
     modeTextButton.addEventListener('click', () => selectGameMode('phonetic-text'));
+    settingsButton.addEventListener('click', openSettingsModal); // (CẬP NHẬT) Nút cài đặt giờ ở màn hình 1
+    reloadButton.addEventListener('click', () => window.location.reload()); 
 
     // Màn hình 2: Chọn chủ đề
     topicBackButton.addEventListener('click', showModeSelectionScreen);
@@ -118,7 +120,7 @@ function addEventListeners() {
     // Màn hình 3: Game
     nextRoundButton.addEventListener('click', startNewRound);
     homeButton.addEventListener('click', goHomeAndSync); // (MỚI) Về Home và Đồng bộ
-    settingsButton.addEventListener('click', openSettingsModal);
+    // settingsButton.addEventListener('click', openSettingsModal); // (ĐÃ XÓA) Sự kiện này giờ được gán ở Màn 1
 
     // Modal Cài đặt
     settingsCloseButton.addEventListener('click', closeSettingsModal);
@@ -572,7 +574,7 @@ function closeStatsModal() {
     statsModal.style.display = 'none';
 }
 
-// (MỚI) Tạo danh sách thống kê
+// (CẬP NHẬT) Tạo danh sách thống kê (Thêm sự kiện click)
 function populateStatsList() {
     statsListContainer.innerHTML = ''; // Xóa cũ
     
@@ -590,6 +592,7 @@ function populateStatsList() {
     statsData.forEach(item => {
         const div = document.createElement('div');
         div.className = 'stat-item';
+        div.dataset.word = item.english; // (MỚI) Lưu từ vào data-word
         
         const wordInfo = document.createElement('div');
         wordInfo.className = 'stat-word-info';
@@ -611,8 +614,20 @@ function populateStatsList() {
         
         div.appendChild(wordInfo);
         div.appendChild(levelBadge);
+
+        // (MỚI) Thêm sự kiện click để phát âm
+        div.addEventListener('click', handleStatItemClick);
+
         statsListContainer.appendChild(div);
     });
+}
+
+// (MỚI) Xử lý khi nhấn vào một mục trong Thống kê
+function handleStatItemClick(event) {
+    const wordToPlay = event.currentTarget.dataset.word;
+    if (wordToPlay) {
+        playAudio(wordToPlay);
+    }
 }
 
 
