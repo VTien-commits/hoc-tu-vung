@@ -1,0 +1,255 @@
+/* --- Biến CSS --- */
+:root {
+    --bg-color: #f0f4f8;
+    --card-bg: #ffffff;
+    --text-color: #333;
+    --primary-color: #4A90E2;
+    --primary-light: #e4effe;
+    --correct-color: #50C878;
+    --correct-light: #e4f8ea;
+    --incorrect-color: #E63946;
+    --incorrect-light: #fde3e5;
+    --border-color: #d1d9e0;
+    --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* --- Cơ bản --- */
+body {
+    font-family: var(--font-family);
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 100vh;
+    -webkit-tap-highlight-color: transparent; /* Tắt highlight khi nhấn trên mobile */
+}
+
+/* --- Header --- */
+header {
+    width: 100%;
+    background-color: var(--card-bg);
+    padding: 10px 20px;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid var(--border-color);
+    flex-wrap: wrap; /* Cho phép rớt hàng trên màn hình nhỏ */
+}
+
+#game-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin: 5px 10px;
+}
+
+/* --- Nút Xóa Cache --- */
+#clear-cache-button {
+    background-color: #616161; /* Màu xám tối */
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: background-color 0.2s;
+    margin: 5px 10px; /* Thêm margin */
+}
+
+#clear-cache-button:hover {
+    background-color: #424242;
+}
+
+#clear-cache-button:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.score-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: var(--primary-light);
+    color: var(--primary-color);
+    border-radius: 8px;
+    padding: 5px 15px;
+    font-weight: 700;
+    margin: 5px 10px;
+}
+
+#score {
+    font-size: 20px;
+}
+
+/* --- Main content --- */
+.main-container {
+    width: 100%;
+    max-width: 600px; /* Giới hạn chiều rộng trên máy tính bảng/PC */
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+/* --- Thanh tiến trình --- */
+.progress-bar-container {
+    width: 100%;
+    background-color: var(--border-color);
+    border-radius: 10px;
+    height: 10px;
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+#progress-bar {
+    width: 0%;
+    height: 100%;
+    background-color: var(--correct-color);
+    border-radius: 10px;
+    transition: width 0.3s ease-in-out;
+}
+
+/* --- Game --- */
+.game-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    width: 100%;
+}
+
+.column {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.card {
+    background-color: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    padding: 15px;
+    font-size: 16px;
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    transition: all 0.2s ease;
+    user-select: none; /* Không cho chọn text */
+    min-height: 40px; /* Chiều cao tối thiểu */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.card:not(.disabled):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+}
+
+.card.selected {
+    border-color: var(--primary-color);
+    background-color: var(--primary-light);
+    color: var(--primary-color);
+}
+
+.card.correct {
+    border-color: var(--correct-color);
+    background-color: var(--correct-light);
+    color: var(--correct-color);
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.card.incorrect {
+    border-color: var(--incorrect-color);
+    background-color: var(--incorrect-light);
+    color: var(--incorrect-color);
+    animation: shake 0.5s;
+}
+
+.card.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.card.audio-card {
+    font-size: 24px;
+    color: var(--primary-color);
+}
+
+/* --- Nút bấm --- */
+.action-button {
+    width: 100%;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 15px;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 20px;
+    box-shadow: 0 4px 10px rgba(74, 144, 226, 0.3);
+    transition: background-color 0.2s;
+}
+
+.action-button:hover {
+    background-color: #3a7ac8;
+}
+
+/* --- Loader --- */
+.loader-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+}
+
+.loader-content {
+    background-color: var(--card-bg);
+    padding: 20px 30px;
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+#loader-text {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.spinner {
+    width: 24px;
+    height: 24px;
+    border: 4px solid var(--primary-light);
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* --- Animation --- */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}

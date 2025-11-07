@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#4A90E2">
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="images/icon-192.png">
+    <title>Học từ vựng</title>
+</head>
+<body>
+    <header>
+        <h1 id="game-title">Đang tải...</h1>
+
+        <!-- Nút Xóa Cache file âm thanh -->
+        <button id="clear-cache-button" title="Xóa toàn bộ file âm thanh đã lưu">
+            Xóa Cache Audio
+        </button>
+
+        <div class="score-container">
+            <span>Điểm</span>
+            <span id="score">0</span>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <div class="progress-bar-container">
+            <div id="progress-bar"></div>
+        </div>
+
+        <div id="game-container" class="game-container">
+            <div id="left-column" class="column"></div>
+            <div id="right-column" class="column"></div>
+        </div>
+
+        <button id="next-round-button" class="action-button" style="display: none;">Màn tiếp theo</button>
+    </main>
+
+    <div id="loader" class="loader-overlay" style="display: none;">
+        <div class="loader-content">
+            <div class="spinner"></div>
+            <p id="loader-text">Đang tải...</p>
+        </div>
+    </div>
+</body>
+<script src="main.js"></script>
+</html>

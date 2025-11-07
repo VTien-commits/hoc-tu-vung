@@ -1,0 +1,22 @@
+{
+  "name": "Học Từ Vựng SRS",
+  "short_name": "Học Từ",
+  "description": "Ứng dụng học từ vựng tiếng Anh theo phương pháp Lặp lại ngắt quãng (SRS).",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#f0f4f8",
+  "theme_color": "#4A90E2",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "images/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "images/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ]
+}

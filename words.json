@@ -1,0 +1,102 @@
+[
+  {
+    "id": "w1",
+    "english": "kitchen",
+    "vietnamese": "phòng bếp"
+  },
+  {
+    "id": "w2",
+    "english": "living room",
+    "vietnamese": "phòng khách"
+  },
+  {
+    "id": "w3",
+    "english": "beautiful",
+    "vietnamese": "đẹp"
+  },
+  {
+    "id": "w4",
+    "english": "apartment",
+    "vietnamese": "căn hộ"
+  },
+  {
+    "id": "w5",
+    "english": "store",
+    "vietnamese": "cửa hàng"
+  },
+  {
+    "id": "w6",
+    "english": "sofa",
+    "vietnamese": "ghế sofa"
+  },
+  {
+    "id": "w7",
+    "english": "house",
+    "vietnamese": "ngôi nhà"
+  },
+  {
+    "id": "w8",
+    "english": "computer",
+    "vietnamese": "máy vi tính"
+  },
+  {
+    "id": "w9",
+    "english": "developer",
+    "vietnamese": "lập trình viên"
+  },
+  {
+    "id": "w10",
+    "english": "application",
+    "vietnamese": "ứng dụng"
+  },
+  {
+    "id": "w11",
+    "english": "learn",
+    "vietnamese": "học"
+  },
+  {
+    "id": "w12",
+    "english": "vocabulary",
+    "vietnamese": "từ vựng"
+  },
+  {
+    "id": "w13",
+    "english": "memory",
+    "vietnamese": "trí nhớ"
+  },
+  {
+    "id": "w14",
+    "english": "system",
+    "vietnamese": "hệ thống"
+  },
+  {
+    "id": "w15",
+    "english": "audio",
+    "vietnamese": "âm thanh"
+  },
+  {
+    "id": "w16",
+    "english": "button",
+    "vietnamese": "nút bấm"
+  },
+  {
+    "id": "w17",
+    "english": "cache",
+    "vietnamese": "bộ nhớ đệm"
+  },
+  {
+    "id": "w18",
+    "english": "correct",
+    "vietnamese": "chính xác"
+  },
+  {
+    "id": "w19",
+    "english": "incorrect",
+    "vietnamese": "không chính xác"
+  },
+  {
+    "id": "w20",
+    "english": "family",
+    "vietnamese": "gia đình"
+  }
+]
