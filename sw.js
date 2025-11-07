@@ -8,7 +8,7 @@ const STATIC_ASSETS = [
     'index.html',
     'style.css',
     'main.js',
-    'words.json',
+    'words.json', // words.json được lưu ngay khi cài đặt
     'manifest.json',
     'images/icon-192.png',
     'images/icon-512.png'
@@ -69,6 +69,7 @@ self.addEventListener('fetch', event => {
             caches.open(AUDIO_CACHE_NAME).then(cache => {
                 return cache.match(event.request).then(cachedResponse => {
                     // Nếu có trong cache thì trả về, không thì để mạng tự xử lý
+                    // (main.js sẽ xử lý việc tải và lưu nếu không tìm thấy)
                     return cachedResponse || fetch(event.request);
                 });
             })
@@ -76,29 +77,23 @@ self.addEventListener('fetch', event => {
         return; // Dừng tại đây
     }
 
-    // Chiến lược 2: Ưu tiên mạng, nếu không thì lấy cache (Network First) cho API
-    // (Áp dụng cho words.json để luôn có dữ liệu mới)
-    if (event.request.url.includes('words.json')) {
-        event.respondWith(
-            caches.open(STATIC_CACHE_NAME).then(cache => {
-                return fetch(event.request).then(networkResponse => {
-                    // Tải thành công -> lưu vào cache
-                    cache.put(event.request, networkResponse.clone());
-                    return networkResponse;
-                }).catch(() => {
-                    // Tải thất bại -> lấy từ cache
-                    return cache.match(event.request);
-                });
-            })
-        );
-        return; // Dừng tại đây
-    }
+    // (ĐÃ XÓA) Chiến lược 2: Ưu tiên mạng cho 'words.json' đã bị xóa.
+    // Tệp 'words.json' bây giờ sẽ được xử lý bởi Chiến lược 3.
 
     // Chiến lược 3: Ưu tiên cache, nếu không thì lấy mạng (Cache First) cho các file tĩnh
+    // (Bao gồm 'words.json' vì nó nằm trong STATIC_ASSETS)
     event.respondWith(
         caches.match(event.request).then(cachedResponse => {
-            return cachedResponse || fetch(event.request).then(networkResponse => {
-                // Tùy chọn: lưu lại các file tĩnh khác nếu cần
+            // Nếu tìm thấy trong cache, trả về ngay lập tức
+            if (cachedResponse) {
+                return cachedResponse;
+            }
+            
+            // Nếu không, đi lấy từ mạng
+            return fetch(event.request).then(networkResponse => {
+                // (Tùy chọn) Bạn có thể cache lại ở đây nếu muốn,
+                // nhưng vì nó đã có trong STATIC_ASSETS, việc này không quá cần thiết
+                // trừ khi file đó không nằm trong danh sách ban đầu.
                 // caches.open(STATIC_CACHE_NAME).then(cache => {
                 //     cache.put(event.request, networkResponse.clone());
                 // });
