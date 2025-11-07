@@ -1,6 +1,6 @@
 // ***********************************************
 // LOGIC SRS (LẶP LẠI NGẮT QUÃNG), PRELOADING VÀ XÓA CACHE
-// PHIÊN BẢN CÓ TẢI TRƯỚC PHIÊN ÂM
+// PHIÊN BẢN CÓ 2 CHẾ ĐỘ (NGHE / ĐỌC)
 // ***********************************************
 
 // --- Cài đặt SRS ---
@@ -28,7 +28,7 @@ let selectedLeft = null;
 let selectedRight = null;
 let correctPairs = 0;
 let totalScore = 0;
-let gameMode = 'audio-text'; // 'audio-text' hoặc 'text-text'
+let gameMode = 'phonetic-text'; // (CẬP NHẬT) 'audio-only' hoặc 'phonetic-text'
 
 // --- DOM Elements ---
 const gameContainer = document.getElementById('game-container');
@@ -210,17 +210,17 @@ async function startNewRound() {
     await preloadDataForRound(currentWords); // Đổi tên hàm
     showLoader(false); // Ẩn loader khi xong
 
-    // 3. Quyết định chế độ chơi (50/50)
-    gameMode = Math.random() < 0.5 ? 'audio-text' : 'text-text';
+    // 3. (CẬP NHẬT) Quyết định chế độ chơi
+    gameMode = Math.random() < 0.5 ? 'audio-only' : 'phonetic-text';
     
-    gameTitle.textContent = gameMode === 'audio-text' ? "Nghe và nối" : "Nối các cặp";
+    gameTitle.textContent = gameMode === 'audio-only' ? "Nghe và nối" : "Đọc và nối"; // Cập nhật tiêu đề
 
     // 4. Tạo thẻ (CẬP NHẬT)
     const leftItems = currentWords.map(word => ({
         id: word.id,
-        text: gameMode === 'audio-text' ? `🔊` : word.english, // Chế độ nghe hoặc chế độ chữ
+        text: gameMode === 'audio-only' ? `🔊` : word.english, // Kiểu 1: Icon, Kiểu 2: Chữ
         word: word.english, // Dùng để tra cứu audio
-        type: gameMode === 'audio-text' ? 'audio' : 'text'
+        type: gameMode // 'audio-only' hoặc 'phonetic-text'
     }));
     const rightItems = currentWords.map(word => ({
         id: word.id,
@@ -242,12 +242,12 @@ function createCard(item, side) {
     card.dataset.side = side;
     card.dataset.word = item.word; // Luôn gán word để phát âm
 
-    if (item.type === 'audio') {
-        // CHẾ ĐỘ AUDIO (Bên trái)
+    if (item.type === 'audio-only') {
+        // (CẬP NHẬT) CHẾ ĐỘ AUDIO (Bên trái)
         card.classList.add('audio-card');
         card.textContent = '🔊';
-    } else if (item.type === 'text' && side === 'left') {
-        // CHẾ ĐỘ TEXT (Bên trái) - Hiển thị Word + Phonetic
+    } else if (item.type === 'phonetic-text' && side === 'left') {
+        // (CẬP NHẬT) CHẾ ĐỘ TEXT (Bên trái) - Hiển thị Word + Phonetic
         card.classList.add('text-audio-card'); // Class để nhận diện
         
         const wordPhonetic = progress[item.id]?.phonetic; // Lấy phiên âm đã lưu
@@ -511,7 +511,7 @@ async function fetchAndCacheWordData(word, wordId, audioButtonElement, shouldPla
             saveProgress();
             
             // CẬP NHẬT GIAO DIỆN NGAY: Nếu thẻ đang hiển thị, cập nhật phiên âm
-            if (!shouldPlay && gameMode === 'text-text') {
+            if (!shouldPlay && gameMode === 'phonetic-text') { // (CẬP NHẬT) Chỉ cập nhật nếu là mode 'phonetic-text'
                 const card = document.querySelector(`.card[data-id="${wordId}"][data-side="left"]`);
                 if (card && !card.querySelector('.card-phonetic')) {
                     const phoneticEl = document.createElement('div');
