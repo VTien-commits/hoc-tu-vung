@@ -10,7 +10,26 @@
     <title>Học từ vựng</title>
 </head>
 <body>
-    <header>
+
+    <!-- (MỚI) Màn hình chọn chế độ chơi -->
+    <div id="mode-selection-overlay" class="mode-overlay">
+        <div class="mode-selection-box">
+            <h2>Chọn kiểu chơi</h2>
+            <button id="mode-audio-button" class="mode-select-button">
+                <span>🔊</span>
+                Nghe & Nối
+                <p>Nghe âm thanh và nối với nghĩa tiếng Việt.</p>
+            </button>
+            <button id="mode-text-button" class="mode-select-button">
+                <span>📖</span>
+                Đọc & Nối
+                <p>Đọc từ tiếng Anh (kèm phiên âm) và nối với nghĩa.</p>
+            </button>
+        </div>
+    </div>
+
+    <!-- (CẬP NHẬT) Ẩn ban đầu -->
+    <header style="display: none;">
         <h1 id="game-title">Đang tải...</h1>
 
         <!-- Nút Xóa Cache file âm thanh -->
@@ -24,7 +43,8 @@
         </div>
     </header>
 
-    <main class="main-container">
+    <!-- (CẬP NHẬT) Ẩn ban đầu -->
+    <main class="main-container" style="display: none;">
         <div class="progress-bar-container">
             <div id="progress-bar"></div>
         </div>

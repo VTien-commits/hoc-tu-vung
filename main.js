@@ -28,7 +28,7 @@ let selectedLeft = null;
 let selectedRight = null;
 let correctPairs = 0;
 let totalScore = 0;
-let gameMode = 'phonetic-text'; // (CẬP NHẬT) 'audio-only' hoặc 'phonetic-text'
+let gameMode = null; // (CẬP NHẬT) Sẽ được đặt khi người dùng chọn
 
 // --- DOM Elements ---
 const gameContainer = document.getElementById('game-container');
@@ -40,7 +40,15 @@ const nextRoundButton = document.getElementById('next-round-button');
 const loader = document.getElementById('loader');
 const loaderText = document.getElementById('loader-text');
 const gameTitle = document.getElementById('game-title');
-const clearCacheButton = document.getElementById('clear-cache-button'); // DOM Nút Xóa
+const clearCacheButton = document.getElementById('clear-cache-button');
+
+// (MỚI) DOM Elements cho chọn chế độ
+const modeSelectionOverlay = document.getElementById('mode-selection-overlay');
+const modeAudioButton = document.getElementById('mode-audio-button');
+const modeTextButton = document.getElementById('mode-text-button');
+const header = document.querySelector('header');
+const mainContent = document.querySelector('.main-container');
+
 
 // --- Khởi động ---
 document.addEventListener('DOMContentLoaded', initializeApp);
@@ -75,18 +83,44 @@ async function initializeApp() {
         // Đồng bộ "trí nhớ" với kho từ vựng (cho trường hợp thêm từ mới)
         syncProgress();
 
-        // Gán sự kiện cho nút
+        // Gán sự kiện cho nút (Màn tiếp theo)
         nextRoundButton.addEventListener('click', startNewRound);
 
-        // Bắt đầu màn đầu tiên
-        startNewRound();
+        // (MỚI) Gán sự kiện cho nút chọn chế độ
+        modeAudioButton.addEventListener('click', () => selectGameMode('audio-only'));
+        modeTextButton.addEventListener('click', () => selectGameMode('phonetic-text'));
+
+        // (CẬP NHẬT) Không bắt đầu game ngay, chỉ ẩn loader
+        // Màn hình chọn chế độ đã hiển thị mặc định
+        showLoader(false);
+
     } catch (error) {
         console.error("Lỗi khi khởi động:", error);
-        gameTitle.textContent = "Lỗi tải dữ liệu";
-    } finally {
-        showLoader(false);
+        // Hiển thị lỗi trên màn hình chọn chế độ nếu có thể
+        if(modeSelectionOverlay) {
+            modeSelectionOverlay.innerHTML = `<h2>Lỗi tải dữ liệu</h2><p>${error.message}</p><p>Vui lòng tải lại trang.</p>`;
+        } else {
+            gameTitle.textContent = "Lỗi tải dữ liệu";
+        }
+        showLoader(false); // Ẩn loader nếu có lỗi
     }
 }
+
+// (MỚI) Hàm chọn chế độ chơi và bắt đầu game
+function selectGameMode(mode) {
+    gameMode = mode;
+    
+    // Ẩn màn hình chọn chế độ
+    modeSelectionOverlay.style.display = 'none';
+    
+    // Hiển thị giao diện game chính
+    header.style.display = 'flex';
+    mainContent.style.display = 'block';
+    
+    // Bắt đầu màn đầu tiên
+    startNewRound();
+}
+
 
 // --- Logic SRS (Cốt lõi) ---
 
@@ -188,6 +222,16 @@ function updateWordProgress(wordId, isCorrect) {
 
 // Bắt đầu màn chơi mới (ĐÃ CẬP NHẬT)
 async function startNewRound() {
+    // (MỚI) Kiểm tra nếu chưa chọn chế độ thì không làm gì cả
+    if (!gameMode) {
+        console.error("Lỗi: startNewRound() được gọi khi chưa chọn gameMode.");
+        // Hiển thị lại màn hình chọn
+        modeSelectionOverlay.style.display = 'flex';
+        header.style.display = 'none';
+        mainContent.style.display = 'none';
+        return;
+    }
+
     showLoader(false);
     nextRoundButton.style.display = 'none';
     gameContainer.style.opacity = 1;
@@ -205,17 +249,17 @@ async function startNewRound() {
         return;
     }
     
-    // 2. TẢI TRƯỚC ÂM THANH VÀ PHIÊN ÂM (PRELOAD) (CẬP NHẬT)
+    // 2. TẢI TRƯỚC ÂM THANH VÀ PHIÊN ÂM (PRELOAD)
     showLoader(true, "Đang chuẩn bị dữ liệu..."); // Cập nhật text
     await preloadDataForRound(currentWords); // Đổi tên hàm
     showLoader(false); // Ẩn loader khi xong
 
     // 3. (CẬP NHẬT) Quyết định chế độ chơi
-    gameMode = Math.random() < 0.5 ? 'audio-only' : 'phonetic-text';
+    // Đã xóa dòng: gameMode = Math.random() < 0.5 ? 'audio-only' : 'phonetic-text';
     
     gameTitle.textContent = gameMode === 'audio-only' ? "Nghe và nối" : "Đọc và nối"; // Cập nhật tiêu đề
 
-    // 4. Tạo thẻ (CẬP NHẬT)
+    // 4. Tạo thẻ (Logic này giữ nguyên, đã dựa vào gameMode)
     const leftItems = currentWords.map(word => ({
         id: word.id,
         text: gameMode === 'audio-only' ? `🔊` : word.english, // Kiểu 1: Icon, Kiểu 2: Chữ
@@ -462,8 +506,6 @@ async function fetchAndCacheWordData(word, wordId, audioButtonElement, shouldPla
     const cache = await caches.open(AUDIO_CACHE_NAME);
     const hasPhonetic = progress[wordId]?.phonetic; // Đã có phiên âm chưa?
     
-    // (Chúng ta vẫn sẽ gọi API để kiểm tra audio, vì cache.match tốn thời gian)
-
     try {
         // Gọi API từ điển
         const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${normalizedWord}`);
@@ -511,9 +553,11 @@ async function fetchAndCacheWordData(word, wordId, audioButtonElement, shouldPla
             saveProgress();
             
             // CẬP NHẬT GIAO DIỆN NGAY: Nếu thẻ đang hiển thị, cập nhật phiên âm
-            if (!shouldPlay && gameMode === 'phonetic-text') { // (CẬP NHẬT) Chỉ cập nhật nếu là mode 'phonetic-text'
+            // (CẬP NHẬT) Chỉ cập nhật nếu đang ở chế độ 'phonetic-text'
+            if (gameMode === 'phonetic-text') {
                 const card = document.querySelector(`.card[data-id="${wordId}"][data-side="left"]`);
-                if (card && !card.querySelector('.card-phonetic')) {
+                // Thêm kiểm tra card.querySelector('.card-content')
+                if (card && card.querySelector('.card-content') && !card.querySelector('.card-phonetic')) {
                     const phoneticEl = document.createElement('div');
                     phoneticEl.className = 'card-phonetic';
                     phoneticEl.textContent = phoneticText;
