@@ -13,7 +13,7 @@ const WORDS_PER_ROUND = 6; // Số từ mỗi màn
 
 // Khoảng thời gian lặp lại (theo level), tính bằng ngày
 const SRS_LEVELS = {
-// ... (Tất cả code còn lại y hệt như tệp "main.js (Đã cập nhật với URL của bạn)" ở trên) ...
+    0: 0,   // Mới học (sẽ ôn lại trong màn này)
     1: 1,   // 1 ngày
     2: 3,   // 3 ngày
     3: 7,   // 1 tuần
@@ -537,7 +537,7 @@ function checkMatch() {
             selectedRight.classList.remove('incorrect', 'selected', 'disabled');
             selectedLeft = null;
             selectedRight = null;
-        }, 1000);
+        }, 1000); // <-- Thời gian 1 giây
     }
 
     if (isMatch) {
