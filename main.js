@@ -7,6 +7,10 @@
 // !!! QUAN TRỌNG: Dán URL Ứng dụng web Google Apps Script của bạn vào đây
 const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxshuYRDZZUNwoOOG1_ME3tFO6RljsmvImNRFv35WgDkODRLqx-jaz0EaEXTGR6Wwiq/exec'; 
 
+// (MỚI) Đường dẫn tới thư mục ảnh trên GitHub
+// (Nó sẽ tự động tìm trong thư mục 'images' cùng cấp với index.html)
+const IMAGE_BASE_PATH = 'images/';
+
 const PROGRESS_STORAGE_KEY = 'vocabAppProgress'; // Khóa lưu "trí nhớ" cục bộ
 const AUDIO_CACHE_NAME = 'audio-cache-v1';
 const WORDS_PER_ROUND = 6; // Số từ mỗi màn
@@ -441,24 +445,55 @@ function createCard(item, side) {
     card.dataset.word = item.word;
 
     if (item.type === 'audio-only') {
+        // CHẾ ĐỘ AUDIO (Bên trái)
         card.classList.add('audio-card');
         card.textContent = '🔊';
     } else if (item.type === 'phonetic-text' && side === 'left') {
+        // (CẬP NHẬT) CHẾ ĐỘ TEXT (Bên trái) - Hiển thị [Chữ + Phiên âm | Ảnh]
         card.classList.add('text-audio-card');
         const wordPhonetic = progress[item.id]?.phonetic;
-        const cardContent = document.createElement('div');
-        cardContent.className = 'card-content';
+        
+        // 1. Tạo cấu trúc (wrapper)
+        const wrapperDiv = document.createElement('div');
+        wrapperDiv.className = 'card-with-image'; // Class mới cho Flexbox
+
+        // 2. Tạo phần chữ (Word + Phonetic)
+        const textContentDiv = document.createElement('div');
+        textContentDiv.className = 'card-text-content'; // Class mới
+
         const wordEl = document.createElement('div');
         wordEl.className = 'card-word';
         wordEl.textContent = item.text;
-        cardContent.appendChild(wordEl);
+        textContentDiv.appendChild(wordEl);
+
         if (wordPhonetic) {
             const phoneticEl = document.createElement('div');
             phoneticEl.className = 'card-phonetic';
             phoneticEl.textContent = wordPhonetic;
-            cardContent.appendChild(phoneticEl);
+            textContentDiv.appendChild(phoneticEl);
         }
-        card.appendChild(cardContent);
+        
+        // 3. Tạo phần ảnh
+        const imageContainerDiv = document.createElement('div');
+        imageContainerDiv.className = 'card-image-container'; // Class mới
+        
+        const imgEl = document.createElement('img');
+        imgEl.src = formatWordForImageName(item.word); // Tự động tạo link ảnh
+        
+        // Tự động ẩn nếu không tìm thấy ảnh
+        imgEl.onerror = function() { 
+            this.style.display = 'none'; 
+            // Nếu ảnh lỗi, căn giữa lại phần chữ
+            wrapperDiv.style.justifyContent = 'center'; 
+        };
+        
+        imageContainerDiv.appendChild(imgEl);
+
+        // 4. Gắn vào thẻ
+        wrapperDiv.appendChild(textContentDiv);
+        wrapperDiv.appendChild(imageContainerDiv);
+        card.appendChild(wrapperDiv);
+
     } else {
         const cardContent = document.createElement('div');
         cardContent.className = 'card-content';
@@ -512,310 +547,17 @@ function handleCardClick(event) {
     }
 }
 
-// Kiểm tra (Giữ nguyên)
-function checkMatch() {
-    const isMatch = selectedLeft.dataset.id === selectedRight.dataset.id;
-    const wordId = selectedLeft.dataset.id;
-
-    selectedLeft.classList.add('disabled');
-    selectedRight.classList.add('disabled');
-
-    if (isMatch) {
-        selectedLeft.classList.add('correct');
-        selectedRight.classList.add('correct');
-        correctPairs++;
-        totalScore += 10;
-        updateWordProgress(wordId, true); // Lưu vào localStorage
-
-        if (correctPairs === currentWords.length) {
-            gameContainer.style.opacity = 0.5;
-            nextRoundButton.style.display = 'block';
-        }
-        
-        // (CẬP NHẬT) Reset ngay khi đúng
-        selectedLeft = null;
-        selectedRight = null;
-    } else {
-        isChecking = true; // (MỚI) Khóa các lượt click khác
-        
-        selectedLeft.classList.add('incorrect');
-        selectedRight.classList.add('incorrect');
-        totalScore = Math.max(0, totalScore - 5);
-        updateWordProgress(wordId, false); // Lưu vào localStorage
-
-        setTimeout(() => {
-            selectedLeft.classList.remove('incorrect', 'selected', 'disabled');
-            selectedRight.classList.remove('incorrect', 'selected', 'disabled');
-            selectedLeft = null;
-            selectedRight = null;
-            isChecking = false; // (MỚI) Mở khóa sau 1 giây
-        }, 1000); // <-- Thời gian 1 giây
-    }
-
-    // (ĐÃ XÓA) Bỏ khối 'if (isMatch)' ở đây vì đã chuyển lên trên
-}
-
-// Cập nhật thanh tiến trình (Giữ nguyên)
-function updateProgress() {
-    const progressPercent = (correctPairs / currentWords.length) * 100;
-    progressBar.style.width = `${progressPercent}%`;
-    scoreDisplay.textContent = totalScore;
-}
-
-
-// --- (MỚI) Modal Cài đặt & Thống kê ---
-
-function openSettingsModal() {
-    settingsModal.style.display = 'flex';
-}
-function closeSettingsModal() {
-    settingsModal.style.display = 'none';
-}
-function openStatsModal() {
-    populateStatsList(); // Tạo danh sách thống kê
-    statsModal.style.display = 'flex';
-}
-function closeStatsModal() {
-    statsModal.style.display = 'none';
-}
-
-// (CẬP NHẬT) Tạo danh sách thống kê (Thêm sự kiện click)
-function populateStatsList() {
-    statsListContainer.innerHTML = ''; // Xóa cũ
-    
-    // 1. Tạo một mảng từ 'allWords'
-    // 2. Map nó với 'progress'
-    // 3. Sắp xếp theo level (cao -> thấp)
-    const statsData = allWords.map(word => ({
-        id: word.id,
-        english: word.english,
-        vietnamese: word.vietnamese,
-        level: progress[word.id]?.level || 0 // Lấy level từ 'progress'
-    })).sort((a, b) => b.level - a.level); // Sắp xếp giảm dần
-
-    // 4. Tạo HTML
-    statsData.forEach(item => {
-        const div = document.createElement('div');
-        div.className = 'stat-item';
-        div.dataset.word = item.english; // (MỚI) Lưu từ vào data-word
-        
-        const wordInfo = document.createElement('div');
-        wordInfo.className = 'stat-word-info';
-        
-        const wordEn = document.createElement('div');
-        wordEn.className = 'stat-word';
-        wordEn.textContent = item.english;
-        
-        const wordVi = document.createElement('div');
-        wordVi.className = 'card-phonetic'; // Dùng lại style
-        wordVi.textContent = item.vietnamese;
-        
-        wordInfo.appendChild(wordEn);
-        wordInfo.appendChild(wordVi);
-        
-        const levelBadge = document.createElement('div');
-        levelBadge.className = `stat-level stat-level-${item.level}`;
-        levelBadge.textContent = `Level ${item.level}`;
-        
-        div.appendChild(wordInfo);
-        div.appendChild(levelBadge);
-
-        // (MỚI) Thêm sự kiện click để phát âm
-        div.addEventListener('click', handleStatItemClick);
-
-        statsListContainer.appendChild(div);
-    });
-}
-
-// (MỚI) Xử lý khi nhấn vào một mục trong Thống kê
-function handleStatItemClick(event) {
-    const wordToPlay = event.currentTarget.dataset.word;
-    if (wordToPlay) {
-        playAudio(wordToPlay);
-    }
-}
-
-
-// --- Các hàm hỗ trợ (Tải âm thanh) ---
-
-async function clearAudioCache() {
-    console.log('Đang xóa cache âm thanh theo yêu cầu...');
-    showLoader(true, "Đang xóa cache âm thanh...");
-    try {
-        await caches.delete(AUDIO_CACHE_NAME);
-        console.log('Đã xóa cache âm thanh thành công.');
-        await caches.open(AUDIO_CACHE_NAME); // Mở lại cache rỗng
-        showLoader(true, "Đã xóa xong!");
-        setTimeout(() => {
-            showLoader(false);
-            closeSettingsModal(); // Đóng modal sau khi xóa
-        }, 1500); 
-    } catch (err) {
-        console.error('Lỗi khi xóa cache âm thanh:', err);
-        showLoader(true, "Xóa cache thất bại!");
-        setTimeout(() => {
-            showLoader(false);
-        }, 2000);
-    }
-}
-
-function normalizeWord(word) {
+// (MỚI) Hàm định dạng tên ảnh
+// Ví dụ: "living room" -> "images/living_room.png"
+// "go-went-gone" -> "images/go_went_gone.png"
+function formatWordForImageName(word) {
     if (!word) return "";
-    return word.trim().toLowerCase();
+    // Thay thế dấu cách, dấu gạch ngang bằng gạch dưới
+    const imageName = word.toLowerCase().replace(/[\s-]+/g, '_'); 
+    return `${IMAGE_BASE_PATH}${imageName}.png`;
 }
 
-// (CẬP NHẬT) Tải trước (preload) - Giờ không cần async/await
-function preloadDataForRound(words) {
-    console.log(`Đang tải trước dữ liệu cho ${words.length} từ...`);
-    words.forEach(word => {
-        if (!word.english) return;
-        // Gọi hàm fetch, không phát (shouldPlay = false)
-        fetchAndCacheWordData(word.english, word.id, null, false); 
-    });
-    console.log("Đã kích hoạt tải trước (chạy nền).");
-}
-
-async function playAudio(word) {
-    if (!word) return;
-    const audioButton = document.querySelector(`.card[data-word="${word}"][data-side="left"]`);
-    if (audioButton) audioButton.classList.add('selected'); 
-
-    const wordData = allWords.find(w => w.english === word);
-    if (!wordData) {
-        console.error(`Không tìm thấy wordData cho: ${word}`);
-        return;
-    }
-    fetchAndCacheWordData(word, wordData.id, audioButton, true);
-}
-
-// (CẬP NHẬT) Lấy ÂM THANH và PHIÊN ÂM
-async function fetchAndCacheWordData(word, wordId, audioButtonElement, shouldPlay) {
-    // (MỚI) Xử lý từ ghép hoặc động từ bất quy tắc
-    let wordToLookup = word;
-    
-    // Nếu từ chứa dấu gạch ngang (go-went-gone) hoặc nhiều hơn 2 từ (eat ate eaten),
-    // chúng ta chỉ lấy từ đầu tiên để tra cứu âm thanh.
-    if (word.includes('-') || word.split(' ').length > 2) {
-        // Tách từ theo dấu gạch ngang hoặc dấu cách và lấy phần tử đầu tiên
-        wordToLookup = word.split(word.includes('-') ? '-' : ' ')[0].trim();
-    }
-    // "living room" (2 từ) vẫn sẽ được giữ nguyên và tra cứu đúng.
-    
-    const normalizedWord = normalizeWord(wordToLookup); // (CẬP NHẬT) Dùng từ đã xử lý
-    if (!normalizedWord) return;
-
-    const cache = await caches.open(AUDIO_CACHE_NAME);
-    const hasPhonetic = progress[wordId]?.phonetic;
-    
-    try {
-        const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${normalizedWord}`);
-        if (!response.ok) throw new Error('Không tìm thấy từ (404)');
-        
-        const data = await response.json();
-        
-        let audioUrl = "";
-        let phoneticText = hasPhonetic ? progress[wordId].phonetic : null;
-
-        if (data[0] && data[0].phonetics) {
-            let phoneticData = data[0].phonetics.find(p => p.audio && p.audio !== "" && p.text);
-            if (!phoneticData) {
-                phoneticData = data[0].phonetics.find(p => p.audio && p.audio !== "");
-            }
-            if (!phoneticData && !hasPhonetic) {
-                const textOnlyPhonetic = data[0].phonetics.find(p => p.text);
-                if(textOnlyPhonetic) phoneticText = textOnlyPhonetic.text;
-            }
-            if (phoneticData) {
-                if (!phoneticText && phoneticData.text) {
-                    phoneticText = phoneticData.text;
-                }
-                if(phoneticData.audio) {
-                    audioUrl = phoneticData.audio;
-                    if (audioUrl.startsWith("//")) {
-                        audioUrl = "https" + audioUrl;
-                    }
-                }
-            }
-        }
-        
-        if (phoneticText && !hasPhonetic) {
-            progress[wordId].phonetic = phoneticText;
-            saveProgress();
-            
-            // CẬP NHẬT TRỰC TIẾP (MỚI)
-            // Nếu thẻ đang được hiển thị, cập nhật phiên âm ngay lập tức
-            const cardToUpdate = document.querySelector(`.card[data-id="${wordId}"] .card-content`);
-            if (cardToUpdate && !cardToUpdate.querySelector('.card-phonetic')) {
-                const phoneticEl = document.createElement('div');
-                phoneticEl.className = 'card-phonetic';
-                phoneticEl.textContent = phoneticText;
-                cardToUpdate.appendChild(phoneticEl);
-            }
-        }
-
-        if (audioUrl) {
-            let cachedResponse = await cache.match(audioUrl);
-            let audioBlob;
-            if (cachedResponse) {
-                if (shouldPlay) console.log(`[Cache] Đã tìm thấy ${normalizedWord}.`);
-                audioBlob = await cachedResponse.blob();
-            } else {
-                console.log(`[Network] Đang tải ${normalizedWord}, sẽ lưu vào cache...`);
-                const networkResponse = await fetch(audioUrl);
-                if (!networkResponse.ok) throw new Error('Không thể tải file MP3');
-                await cache.put(audioUrl, networkResponse.clone());
-                audioBlob = await networkResponse.blob();
-            }
-            if (shouldPlay) {
-                const objectUrl = URL.createObjectURL(audioBlob);
-                playAudioFromUrl(objectUrl, audioButtonElement);
-            }
-        } else {
-            if (shouldPlay) {
-                console.warn(`Không tìm thấy audio URL cho từ: ${normalizedWord}`);
-                if (audioButtonElement) {
-                    const originalHTML = audioButtonElement.innerHTML;
-                    audioButtonElement.innerHTML = "Không có audio";
-                    audioButtonElement.classList.remove('selected');
-                    setTimeout(() => {
-                        audioButtonElement.innerHTML = originalHTML;
-                    }, 1500);
-                }
-            }
-        }
-    } catch (error) {
-        console.error(`Lỗi khi xử lý dữ liệu cho ${word}:`, error);
-        if (shouldPlay && audioButtonElement && audioButtonElement !== selectedLeft) {
-            audioButtonElement.classList.remove('selected');
-        }
-    }
-}
-
-
-function playAudioFromUrl(url, audioButton) {
-    const audio = new Audio(url);
-    audio.onended = () => {
-        if (audioButton && audioButton !== selectedLeft) {
-            audioButton.classList.remove('selected');
-        }
-        URL.revokeObjectURL(url);
-    };
-    audio.onerror = () => {
-        console.error("Lỗi khi phát file audio.");
-        if (audioButton && audioButton !== selectedLeft) {
-            audioButton.classList.remove('selected');
-        }
-        URL.revokeObjectURL(url);
-    };
-    audio.play();
-}
-
-function showLoader(show, message = "Đang tải...") {
-    if (!loader) return;
-    loaderText.textContent = message;
-    loader.style.display = show ? 'flex' : 'none';
-}
-
+// Hàm xáo trộn mảng
 function shuffleArray(array) {
     for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
