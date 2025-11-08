@@ -33,6 +33,7 @@ let correctPairs = 0;
 let totalScore = 0;
 let gameMode = null; // 'audio-only' hoặc 'phonetic-text'
 let selectedTopic = "Tất cả"; // (MỚI) Chủ đề đang chơi
+let isChecking = false; // (MỚI) Thêm biến "khóa" để chống lỗi race condition
 
 // --- DOM Elements ---
 let gameContainer, leftColumn, rightColumn, progressBar, scoreDisplay, nextRoundButton, loader, loaderText, gameTitle, clearCacheButton;
@@ -476,7 +477,9 @@ function createCard(item, side) {
 // Xử lý nhấn thẻ (Giữ nguyên)
 function handleCardClick(event) {
     const selectedCard = event.currentTarget;
-    if (selectedCard.classList.contains('disabled') || selectedCard.classList.contains('correct')) return;
+    
+    // (CẬP NHẬT) Nếu đang check hoặc thẻ đã bị khóa/đúng, không làm gì cả
+    if (isChecking || selectedCard.classList.contains('disabled') || selectedCard.classList.contains('correct')) return;
 
     const side = selectedCard.dataset.side;
 
@@ -528,7 +531,13 @@ function checkMatch() {
             gameContainer.style.opacity = 0.5;
             nextRoundButton.style.display = 'block';
         }
+        
+        // (CẬP NHẬT) Reset ngay khi đúng
+        selectedLeft = null;
+        selectedRight = null;
     } else {
+        isChecking = true; // (MỚI) Khóa các lượt click khác
+        
         selectedLeft.classList.add('incorrect');
         selectedRight.classList.add('incorrect');
         totalScore = Math.max(0, totalScore - 5);
@@ -539,15 +548,11 @@ function checkMatch() {
             selectedRight.classList.remove('incorrect', 'selected', 'disabled');
             selectedLeft = null;
             selectedRight = null;
+            isChecking = false; // (MỚI) Mở khóa sau 1 giây
         }, 1000); // <-- Thời gian 1 giây
     }
 
-    if (isMatch) {
-        selectedLeft = null;
-        selectedRight = null;
-    }
-
-    updateProgress();
+    // (ĐÃ XÓA) Bỏ khối 'if (isMatch)' ở đây vì đã chuyển lên trên
 }
 
 // Cập nhật thanh tiến trình (Giữ nguyên)
