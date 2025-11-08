@@ -116,8 +116,8 @@ function addEventListeners() {
     // Màn hình 1: Chọn chế độ
     modeAudioButton.addEventListener('click', () => selectGameMode('audio-only'));
     modeTextButton.addEventListener('click', () => selectGameMode('phonetic-text'));
-    settingsButton.addEventListener('click', openSettingsModal); // (CẬP NHẬT) Nút cài đặt giờ ở màn hình 1
-    reloadButton.addEventListener('click', () => window.location.reload()); 
+    settingsButton.addEventListener('click', openSettingsModal);
+    reloadButton.addEventListener('click', hardReloadApp); // (CẬP NHẬT) Gọi hàm reload mới
 
     // Màn hình 2: Chọn chủ đề
     topicBackButton.addEventListener('click', showModeSelectionScreen);
@@ -131,11 +131,39 @@ function addEventListeners() {
     settingsCloseButton.addEventListener('click', closeSettingsModal);
     clearCacheButton.addEventListener('click', clearAudioCache);
     statsButton.addEventListener('click', openStatsModal);
-    reloadButton.addEventListener('click', () => window.location.reload()); // (MỚI) Thêm sự kiện click
+    // reloadButton.addEventListener('click', () => window.location.reload()); // (ĐÃ XÓA) Đã chuyển lên trên
 
     // Modal Thống kê
     statsCloseButton.addEventListener('click', closeStatsModal);
 }
+
+// (MỚI) Hàm Tải lại ứng dụng (Gỡ Service Worker)
+async function hardReloadApp() {
+    showLoader(true, "Đang gỡ bỏ cache, vui lòng chờ...");
+    try {
+        if ('serviceWorker' in navigator) {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            if (registrations.length) {
+                for (const registration of registrations) {
+                    await registration.unregister();
+                    console.log('Đã gỡ Service Worker:', registration);
+                }
+            } else {
+                console.log('Không tìm thấy Service Worker để gỡ.');
+            }
+        }
+        
+        // Đợi 1s để gỡ
+        setTimeout(() => {
+            window.location.reload();
+        }, 1000);
+
+    } catch (error) {
+        console.error('Lỗi khi gỡ Service Worker, tải lại bình thường:', error);
+        window.location.reload();
+    }
+}
+
 
 // (MỚI) Tải dữ liệu từ Google Sheet và LocalStorage
 async function loadData() {
