@@ -255,27 +255,39 @@ async function syncProgressToSheet() {
                 'Content-Type': 'application/json'
             }
         });
+
+        // (MỚI) Xử lý nếu mạng bị lỗi (ví dụ: 404, 500)
+        if (!response.ok) {
+            throw new Error(`Lỗi mạng: ${response.statusText}`);
+        }
         
         const result = await response.json();
         
         if (result.success) {
             console.log(`Đồng bộ thành công ${result.updated} từ.`);
             showLoader(true, "Đồng bộ thành công!");
+
+            // (CẬP NHẬT) Chỉ ẩn loader sau khi thành công
+            setTimeout(() => {
+                showLoader(false);
+            }, 1500);
+
         } else {
+            // Lỗi từ phía Apps Script (ví dụ: code GAS bị sai)
             throw new Error(result.error || "Lỗi đồng bộ không xác định");
         }
         
     } catch (error) {
         console.error("Lỗi khi đồng bộ:", error);
-        showLoader(true, "Lỗi đồng bộ! Tiến độ chưa được lưu.");
-    }
+        // (CẬP NHẬT) Hiển thị lỗi rõ ràng
+        showLoader(true, `Lỗi đồng bộ: ${error.message}`);
 
-    // 3. Đợi 1.5s rồi ẩn loader
-    setTimeout(() => {
-        showLoader(false);
-        // (ĐÃ XÓA) không tải lại trang
-        // window.location.reload(); 
-    }, 1500);
+        // (CẬP NHẬT) Cho 3 giây để đọc lỗi
+        setTimeout(() => {
+            showLoader(false);
+        }, 3000);
+    }
+    // (ĐÃ XÓA) Xóa setTimeout chung khỏi đây
 }
 
 
