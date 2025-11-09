@@ -5,7 +5,7 @@
 
 // --- Cài đặt Chung ---
 // !!! QUAN TRỌNG: Dán URL Ứng dụng web Google Apps Script của bạn vào đây
-const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxshuYRDZZUNwoOOG1_ME3tFO6RljsmvImNRFv35WgDkODRLqx-jaz0EaEXTGR6Wwiq/exec'; 
+const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwj8Ui9jUMOxVXkI6gMZlf84EeLQeYPWMSRbAoitOTH9qSTsx4SgGwXN7uTCTGAdO6T/exec'; 
 
 // (ĐÃ XÓA) Đường dẫn tới thư mục ảnh
 // const IMAGE_BASE_PATH = 'images/';
@@ -173,7 +173,7 @@ async function hardReloadApp() {
 async function loadData() {
     try {
         // Kiểm tra URL đã được cài đặt chưa
-        if (GOOGLE_APPS_SCRIPT_URL === 'DÁN_URL_GOOGLE_APPS_SCRIPT_CỦA_BÁN_VÀO_ĐÂY') {
+        if (GOOGLE_APPS_SCRIPT_URL === 'DÁN_URL_TRIỂN_KHAI_MỚI_CỦA_BẠN_VÀO_ĐÂY') {
              throw new Error('URL Apps Script chưa được cài đặt.');
         }
         
