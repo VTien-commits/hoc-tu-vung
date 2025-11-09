@@ -75,7 +75,7 @@ async function initializeApp() {
 
     // Màn hình 2: Chọn chủ đề
     topicSelectionOverlay = document.getElementById('topic-selection-overlay');
-    topicListContainer = document.getElementById('topic-list');
+    topicListContainer = document.getElementById('topic-list'); // (SỬA) THÊM DÒNG NÀY VÀO
     topicBackButton = document.getElementById('topic-back-button');
 
     // Màn hình 3: Các nút Header
