@@ -80,25 +80,20 @@
     <div id="settings-modal" class="modal-overlay" style="display: none;">
         <div class="modal-content">
             <h2>Cài đặt</h2>
-            <button id="stats-button" class="action-button">Thống kê Từ vựng</button>
-            <button id="clear-cache-button" class="action-button secondary-button">Xóa Cache Audio</button>
-            <button id="export-excel-button" class="action-button secondary-button">Xuất dữ liệu (Excel)</button>
             
-            <!-- (MỚI) Nút Load Data Online -->
-            <button id="load-online-button" class="action-button secondary-button">Load Data Online</button>
-            <p id="load-online-status" class="loading-status" style="display: none;"></p>
-
-            <!-- (MỚI) Cài đặt Timer -->
+            <!-- (CẬP NHẬT) Sắp xếp lại thứ tự -->
+            <button id="stats-button" class="action-button">Thống kê Từ vựng</button>
+            
             <label for="timer-setting" class="settings-label">Thời gian đếm ngược (giây):</label>
             <input type="number" id="timer-setting" class="settings-input" value="60" min="10">
+
+            <button id="export-excel-button" class="action-button secondary-button">Xuất dữ liệu (Excel)</button>
             
-            <!-- Tạm thời vô hiệu hóa tính năng upload -->
-            <!-- <label for="upload-excel" class="action-button disabled-button" title="Tính năng đang phát triển">
-                Thêm từ (Excel)
-            </label> -->
-            <!-- <input type="file" id="upload-excel" accept=".xlsx, .xls" style="display: none;"> -->
+            <button id="load-online-button" class="action-button secondary-button">Load Data Online</button>
+            <p id="load-online-status" class="loading-status" style="display: none;"></p>
             
-            <!-- (MỚI) Nút Học lại từ đầu -->
+            <button id="clear-cache-button" class="action-button secondary-button">Xóa Cache Audio</button>
+            
             <button id="reset-progress-button" class="action-button modal-close-button">Học lại từ đầu</button>
             
             <button id="settings-close-button" class="action-button secondary-button" style="margin-top: 20px;">Đóng</button>
@@ -110,9 +105,14 @@
         <div class="modal-content large">
             <h2>Thống kê Từ vựng</h2>
             
-            <!-- (MỚI) Lọc theo chủ đề -->
-            <label for="stats-topic-filter" class="settings-label" style="margin-top: 0;">Lọc theo chủ đề:</label>
-            <select id="stats-topic-filter" class="settings-input"></select>
+            <!-- (MỚI) Hàng Lọc và Đếm -->
+            <div class="stats-header">
+                <div class="stats-filter-group">
+                    <label for="stats-topic-filter" class="settings-label" style="margin-top: 0;">Lọc theo chủ đề:</label>
+                    <select id="stats-topic-filter" class="settings-input"></select>
+                </div>
+                <span id="stats-total-count" class="stats-total-count">Tổng số từ: 0</span>
+            </div>
             
             <div id="stats-list" class="stats-list-container">
                 <!-- Thống kê sẽ được JS chèn vào đây -->
@@ -133,6 +133,22 @@
             <div class="confirm-buttons">
                 <button id="confirm-reset-cancel" class="action-button secondary-button" style="width: 48%;">Hủy</button>
                 <button id="confirm-reset-confirm" class="action-button modal-close-button" style="width: 48%; margin-top: 0;">Xác nhận</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- (MỚI) Modal Xác nhận Xóa Cache -->
+    <div id="confirm-cache-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <h2>Xác nhận</h2>
+            <p style="font-size: 16px; line-height: 1.5; margin: 10px 0;">
+                Bạn có chắc chắn muốn xóa toàn bộ file âm thanh (Audio) đã tải không?
+                <br>
+                (Lần chơi sau sẽ phải tải lại audio).
+            </p>
+            <div class="confirm-buttons">
+                <button id="confirm-cache-cancel" class="action-button secondary-button" style="width: 48%;">Hủy</button>
+                <button id="confirm-cache-confirm" class="action-button modal-close-button" style="width: 48%; margin-top: 0;">Xác nhận</button>
             </div>
         </div>
     </div>
