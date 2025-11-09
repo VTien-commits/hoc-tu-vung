@@ -14,7 +14,7 @@
     <!-- Màn hình 1: Chọn Chế độ chơi -->
     <div id="mode-selection-overlay" class="mode-overlay">
         <div class="mode-selection-box">
-            <h2>Chế độ học từ vựng</h2> <!-- THAY ĐỔI TÊN -->
+            <h2>Chế độ học từ vựng</h2>
             <p id="loading-status" class="loading-status">Đang tải dữ liệu...</p>
 
             <button id="mode-audio-button" class="mode-select-button" disabled>
@@ -28,7 +28,7 @@
                 <p>Đọc từ tiếng Anh (kèm phiên âm) và nối với nghĩa.</p>
             </button>
 
-            <!-- (MỚI) Nút Cài đặt, đặt ở đây -->
+            <!-- Nút Cài đặt -->
             <button id="settings-button" class="action-button secondary-button">Cài đặt ⚙️</button>
             <!-- Nút Tải lại -->
             <button id="reload-button" class="action-button secondary-button">Tải lại Ứng dụng</button>
@@ -48,14 +48,13 @@
 
     <!-- Màn hình 3: Giao diện game chính -->
     <header style="display: none;">
-        <!-- (MỚI) Nút Home (Thoát) -->
+        <!-- Nút Home (Thoát) -->
         <button id="home-button" class="header-button" title="Về trang chủ">🏠</button>
         
         <h1 id="game-title">Đang tải...</h1>
         
-        <!-- (MỚI) Thay thế div giữ chỗ bằng nút LƯU (SYNC) -->
-        <button id="sync-button" class="header-button" title="Lưu tiến độ lên Google Sheet">💾</button>
-
+        <!-- (ĐÃ XÓA) Nút LƯU (SYNC) đã bị loại bỏ vì lưu tự động vào cache -->
+        
         <div class="score-container">
             <span>Điểm</span>
             <span id="score">0</span>
@@ -80,8 +79,9 @@
             <button id="stats-button" class="action-button">Thống kê Từ vựng</button>
             <button id="clear-cache-button" class="action-button secondary-button">Xóa Cache Audio</button>
             
-            <!-- (ĐÃ DI CHUYỂN) Nút Tải lại đã bị xóa khỏi đây -->
-
+            <!-- (MỚI) Thêm nút Xuất Excel -->
+            <button id="export-excel-button" class="action-button secondary-button">Xuất dữ liệu (Excel)</button>
+            
             <!-- Tạm thời vô hiệu hóa tính năng upload -->
             <label for="upload-excel" class="action-button disabled-button" title="Tính năng đang phát triển">
                 Thêm từ (Excel)
@@ -111,5 +111,7 @@
         </div>
     </div>
 </body>
+<!-- (MỚI) Thêm thư viện SheetJS để xuất Excel -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="main.js"></script>
 </html>

@@ -8,10 +8,12 @@ const STATIC_ASSETS = [
     'index.html',
     'style.css',
     'main.js',
-    // 'words.json', // Xóa vì giờ chúng ta tải từ Google Sheet
+    // 'words.json', // (Đã xóa)
     'manifest.json',
     'images/icon-192.png',
-    'images/icon-512.png'
+    'images/icon-512.png',
+    // (MỚI) Cache thư viện Excel
+    'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
 ];
 
 // --- 1. Cài đặt (Install) ---
@@ -23,7 +25,10 @@ self.addEventListener('install', event => {
                 console.log('[SW] Đang cache các file tĩnh...');
                 return Promise.all(
                     STATIC_ASSETS.map(url => {
-                        return cache.add(url).catch(reason => {
+                        // (CẬP NHẬT) Đối với các file bên ngoài (CDN), chúng ta cần Request
+                        // mà không có credentials (no-cors) để tránh lỗi
+                        const request = new Request(url, { mode: 'no-cors' });
+                        return cache.add(request).catch(reason => {
                             console.warn(`[SW] Không cache được ${url}: ${reason}`);
                         });
                     })
@@ -58,8 +63,8 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
     const url = new URL(event.request.url);
 
-    // (CẬP NHẬT) Chiến lược 0: Bỏ qua Google Apps Script
-    // Luôn lấy từ mạng
+    // (CẬP NHẬT) Chiến lược 0: Bỏ qua Google Apps Script (luôn lấy từ mạng)
+    // Điều này quan trọng để luôn nhận được danh sách từ vựng mới nhất
     if (url.href.includes('macros.google.com')) {
         event.respondWith(fetch(event.request));
         return;
@@ -70,6 +75,7 @@ self.addEventListener('fetch', event => {
         event.respondWith(
             caches.open(AUDIO_CACHE_NAME).then(cache => {
                 return cache.match(event.request).then(cachedResponse => {
+                    // Nếu có trong cache thì dùng, không thì tải mới
                     return cachedResponse || fetch(event.request);
                 });
             })
@@ -77,17 +83,26 @@ self.addEventListener('fetch', event => {
         return;
     }
 
-    // Chiến lược 2: Ưu tiên cache, nếu không thì lấy mạng (Cache First) cho các file tĩnh
+    // (MỚI) Chiến lược 2: Ưu tiên cache cho thư viện Excel
+    if (url.href.includes('cdnjs.cloudflare.com/ajax/libs/xlsx')) {
+        event.respondWith(
+            caches.match(event.request).then(cachedResponse => {
+                // Ưu tiên cache, nếu không có thì tải
+                return cachedResponse || fetch(event.request);
+            })
+        );
+        return;
+    }
+
+    // Chiến lược 3: Ưu tiên cache, nếu không thì lấy mạng (Cache First) cho các file tĩnh
     event.respondWith(
         caches.match(event.request).then(cachedResponse => {
             if (cachedResponse) {
                 return cachedResponse;
             }
+            // Nếu không có trong cache, tải từ mạng
             return fetch(event.request).then(networkResponse => {
-                // Tùy chọn: cache lại các file tĩnh nếu cần
-                // caches.open(STATIC_CACHE_NAME).then(cache => {
-                //     cache.put(event.request, networkResponse.clone());
-                // });
+                // Không cần cache lại ở đây vì đã cache lúc install
                 return networkResponse;
             });
         })
