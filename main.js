@@ -152,7 +152,9 @@ async function initializeApp() {
 
     if (allWords.length > 0) {
         // Nếu có cache, cho phép chơi ngay
-        syncProgress(allWords); // Đồng bộ cache từ vựng và cache tiến độ
+        // (CẬP NHẬT) syncProgress cần Set ID để chạy ngay
+        const wordIds = new Set(allWords.map(w => w.id));
+        syncProgress(allWords, wordIds); // Đồng bộ cache từ vựng và cache tiến độ
         modeAudioButton.disabled = false;
         modeTextButton.disabled = false;
     }
@@ -260,8 +262,11 @@ async function loadDataOnline(isManual = false) {
         saveAllWordsCache(newWords); 
         allWords = newWords; // Cập nhật biến toàn cục
         
-        // (QUAN TRỌNG) Đồng bộ tiến độ (giữ nguyên level cũ)
-        syncProgress(allWords);
+        // (CẬP NHẬT) Nâng cấp logic đồng bộ
+        // Tạo một Set chứa ID của tất cả từ vựng MỚI
+        const newWordIds = new Set(newWords.map(word => word.id));
+        // Truyền cả danh sách mới và Set ID vào hàm sync
+        syncProgress(allWords, newWordIds);
 
         // Bật nút (phòng trường hợp cache rỗng lúc đầu)
         modeAudioButton.disabled = false;
@@ -371,14 +376,22 @@ function saveTimerSetting() {
     localStorage.setItem(TIMER_SETTING_KEY, countdownTime);
 }
 
-// Đồng bộ từ vựng (Sheet) và tiến độ (cache)
-function syncProgress(wordsFromSheet) {
+// (CẬP NHẬT) Đồng bộ từ vựng (Sheet) và tiến độ (cache)
+// Đã nâng cấp để xóa "rác"
+function syncProgress(wordsFromSheet, newWordIds) {
+    // (Sửa lỗi) Nếu newWordIds không được cung cấp (từ khởi động sớm), hãy tạo nó
+    if (!newWordIds) {
+        newWordIds = new Set(wordsFromSheet.map(w => w.id));
+    }
+    
     let updated = false;
     
+    // ----- BƯỚC A: Thêm từ mới và cập nhật -----
+    // Lặp qua danh sách từ vựng MỚI TỪ SHEET
     for (const word of wordsFromSheet) {
         if (!progress[word.id]) {
-            // Nếu từ này MỚI (chưa có trong cache tiến độ)
-            // Lấy level/review từ Sheet làm mặc định (nếu là từ mới thì trên Sheet là 0)
+            // 1. Nếu từ này MỚI (chưa có trong cache tiến độ)
+            // Lấy level/review từ Sheet làm mặc định
             progress[word.id] = {
                 level: word.level, 
                 nextReview: word.nextReview,
@@ -386,12 +399,24 @@ function syncProgress(wordsFromSheet) {
             };
             updated = true;
         } else if (typeof progress[word.id].phonetic === 'undefined') {
-            // Đảm bảo các từ cũ có trường phiên âm
+            // 2. Nếu từ CŨ, đảm bảo nó có trường 'phonetic'
             progress[word.id].phonetic = null;
             updated = true;
         }
-        // Nếu từ ĐÃ có trong progress, chúng ta KHÔNG làm gì
+        // 3. Nếu từ ĐÃ có trong progress, chúng ta KHÔNG làm gì
         // để giữ lại tiến độ đã lưu trong localStorage
+    }
+
+    // ----- BƯỚC B: Dọn dẹp rác -----
+    // Lặp qua danh sách tiến độ CŨ TRONG CACHE
+    for (const id_in_progress in progress) {
+        // Kiểm tra xem ID trong cache có tồn tại trong Set ID mới không
+        if (!newWordIds.has(id_in_progress)) {
+            // Nếu không có (từ này đã bị xóa trên Sheet)
+            delete progress[id_in_progress]; // Xóa "rác"
+            updated = true;
+            console.log(`Đã dọn dẹp từ rác: ${id_in_progress}`);
+        }
     }
     
     if (updated) saveProgress();
