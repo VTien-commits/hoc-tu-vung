@@ -14,7 +14,7 @@
     <!-- Màn hình 1: Chọn Chế độ chơi -->
     <div id="mode-selection-overlay" class="mode-overlay">
         <div class="mode-selection-box">
-            <h2>Chọn kiểu chơi</h2>
+            <h2>Chế độ học từ vựng</h2> <!-- THAY ĐỔI TÊN -->
             <p id="loading-status" class="loading-status">Đang tải dữ liệu...</p>
 
             <button id="mode-audio-button" class="mode-select-button" disabled>
@@ -49,13 +49,12 @@
     <!-- Màn hình 3: Giao diện game chính -->
     <header style="display: none;">
         <!-- (MỚI) Nút Home (Thoát) -->
-        <button id="home-button" class="header-button" title="Về trang chủ (Đồng bộ)">🏠</button>
+        <button id="home-button" class="header-button" title="Về trang chủ">🏠</button>
         
         <h1 id="game-title">Đang tải...</h1>
         
-        <!-- (ĐÃ DI CHUYỂN) Nút Cài đặt đã bị xóa khỏi đây -->
-        <!-- (MỚI) Thêm một div trống để giữ cân bằng cho header -->
-        <div class="header-button-placeholder"></div>
+        <!-- (MỚI) Thay thế div giữ chỗ bằng nút LƯU (SYNC) -->
+        <button id="sync-button" class="header-button" title="Lưu tiến độ lên Google Sheet">💾</button>
 
         <div class="score-container">
             <span>Điểm</span>

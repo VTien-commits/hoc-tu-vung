@@ -44,6 +44,7 @@ let modeSelectionOverlay, modeAudioButton, modeTextButton, loadingStatus;
 let header, mainContent;
 let topicSelectionOverlay, topicListContainer, topicBackButton; // (MỚI) Chọn chủ đề
 let settingsModal, settingsButton, settingsCloseButton, statsButton, homeButton, reloadButton; // (MỚI) Cài đặt, (THÊM reloadButton)
+let syncButton; // (MỚI) Nút lưu (đồng bộ)
 let statsModal, statsCloseButton, statsListContainer; // (MỚI) Thống kê
 
 
@@ -80,6 +81,7 @@ async function initializeApp() {
     // Màn hình 3: Các nút Header
     homeButton = document.getElementById('home-button');
     settingsButton = document.getElementById('settings-button');
+    syncButton = document.getElementById('sync-button'); // (MỚI) Gán nút lưu
 
     // Modal Cài đặt
     settingsModal = document.getElementById('settings-modal');
@@ -123,8 +125,8 @@ function addEventListeners() {
 
     // Màn hình 3: Game
     nextRoundButton.addEventListener('click', startNewRound);
-    homeButton.addEventListener('click', goHomeAndSync); // (MỚI) Về Home và Đồng bộ
-    // settingsButton.addEventListener('click', openSettingsModal); // (ĐÃ XÓA) Sự kiện này giờ được gán ở Màn 1
+    homeButton.addEventListener('click', () => window.location.reload()); // (CẬP NHẬT) Nút Home chỉ tải lại trang
+    syncButton.addEventListener('click', syncProgressToSheet); // (MỚI) Nút Lưu sẽ đồng bộ
 
     // Modal Cài đặt
     settingsCloseButton.addEventListener('click', closeSettingsModal);
@@ -223,34 +225,6 @@ function selectGameMode(mode) {
     topicSelectionOverlay.style.display = 'flex';
 }
 
-// (MỚI) Tạo danh sách chủ đề (Màn 2)
-function populateTopicList() {
-    topicListContainer.innerHTML = ''; // Xóa danh sách cũ
-    
-    // Lấy các chủ đề độc nhất từ 'allWords'
-    const topics = [...new Set(allWords.map(word => word.topic || "Khác"))];
-    
-    // Sắp xếp
-    topics.sort();
-    
-    // Thêm nút "Tất cả"
-    const allButton = document.createElement('button');
-    allButton.className = 'action-button';
-    allButton.textContent = `Tất cả (${allWords.length} từ)`;
-    allButton.addEventListener('click', () => selectTopic('Tất cả'));
-    topicListContainer.appendChild(allButton);
-
-    // Thêm nút cho từng chủ đề
-    topics.forEach(topic => {
-        const count = allWords.filter(w => (w.topic || "Khác") === topic).length;
-        const button = document.createElement('button');
-        button.className = 'action-button secondary-button'; // Màu khác
-        button.textContent = `${topic} (${count} từ)`;
-        button.addEventListener('click', () => selectTopic(topic));
-        topicListContainer.appendChild(button);
-    });
-}
-
 // (MỚI) Chọn chủ đề (Màn 2 -> Màn 3)
 function selectTopic(topic) {
     selectedTopic = topic;
@@ -267,7 +241,8 @@ function selectTopic(topic) {
 }
 
 // (MỚI) Về Home và Đồng bộ
-async function goHomeAndSync() {
+// (CẬP NHẬT) Đổi tên thành syncProgressToSheet và chỉ làm nhiệm vụ đồng bộ
+async function syncProgressToSheet() {
     // 1. Hiển thị loader thông báo
     showLoader(true, "Đang đồng bộ tiến độ...");
     
@@ -295,10 +270,11 @@ async function goHomeAndSync() {
         showLoader(true, "Lỗi đồng bộ! Tiến độ chưa được lưu.");
     }
 
-    // 3. Đợi 1.5s rồi tải lại trang
+    // 3. Đợi 1.5s rồi ẩn loader
     setTimeout(() => {
-        // Tải lại ứng dụng để về màn hình chính
-        window.location.reload(); 
+        showLoader(false);
+        // (ĐÃ XÓA) không tải lại trang
+        // window.location.reload(); 
     }, 1500);
 }
 
@@ -471,14 +447,34 @@ function createCard(item, side) {
     card.dataset.side = side;
     card.dataset.word = item.word;
 
+    // (MỚI) Luôn lấy phiên âm
+    const wordPhonetic = progress[item.id]?.phonetic;
+
     if (item.type === 'audio-only') {
-        // CHẾ ĐỘ AUDIO (Bên trái)
+        // (CẬP NHẬT) CHẾ ĐỘ AUDIO (Thêm phiên âm)
         card.classList.add('audio-card');
-        card.textContent = '🔊';
+        
+        const cardContent = document.createElement('div');
+        cardContent.className = 'card-content';
+        
+        const wordEl = document.createElement('div');
+        wordEl.className = 'card-word';
+        wordEl.textContent = '🔊'; // Icon loa
+        cardContent.appendChild(wordEl);
+
+        // Thêm phiên âm nếu có
+        if (wordPhonetic) {
+            const phoneticEl = document.createElement('div');
+            phoneticEl.className = 'card-phonetic';
+            phoneticEl.textContent = wordPhonetic;
+            cardContent.appendChild(phoneticEl);
+        }
+        card.appendChild(cardContent);
+
     } else if (item.type === 'phonetic-text' && side === 'left') {
-        // CHẾ ĐỘ TEXT (Bên trái) - Hiển thị Word + Phonetic (TRỞ VỀ NHƯ CŨ)
+        // CHẾ ĐỘ TEXT (Bên trái) - Hiển thị Word + Phonetic
         card.classList.add('text-audio-card');
-        const wordPhonetic = progress[item.id]?.phonetic;
+        // const wordPhonetic = progress[item.id]?.phonetic; // Đã lấy ở trên
         
         const cardContent = document.createElement('div');
         cardContent.className = 'card-content';
@@ -818,11 +814,13 @@ function populateStatsList() {
     // 1. Lấy tất cả từ trong "trí nhớ"
     const wordsFromProgress = Object.keys(progress).map(wordId => {
         const wordData = allWords.find(w => w.id === wordId);
+        const phonetic = progress[wordId]?.phonetic || ""; // (MỚI) Lấy phiên âm
         return {
             id: wordId,
             english: wordData ? wordData.english : "Không rõ",
             vietnamese: wordData ? wordData.vietnamese : "Không rõ",
-            level: progress[wordId].level
+            level: progress[wordId].level,
+            phonetic: phonetic // (MỚI)
         };
     });
     
@@ -836,9 +834,12 @@ function populateStatsList() {
         // (CẬP NHẬT) Thêm data-word để phát âm
         item.dataset.word = word.english; 
         
+        // (MỚI) Tạo chuỗi phiên âm
+        const phoneticDisplay = word.phonetic ? ` - <span class="card-phonetic">${word.phonetic}</span>` : "";
+
         item.innerHTML = `
             <div class="stat-word">
-                ${word.english}
+                <div>${word.english}${phoneticDisplay}</div> <!-- CẬP NHẬT -->
                 <div class="card-phonetic" style="color: #555;">${word.vietnamese}</div>
             </div>
             <span class="stat-level stat-level-${word.level}">Level ${word.level}</span>

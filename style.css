@@ -210,9 +210,10 @@ header {
 .card.audio-card {
     font-size: 24px;
     color: var(--primary-color);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    /* (ĐÃ XÓA) Bỏ flex-box cũ */
+    /* display: flex; */
+    /* align-items: center; */
+    /* justify-content: center; */
 }
 
 /* (ĐÃ XÓA) Xóa các class CSS cho ảnh */
@@ -493,7 +494,26 @@ header {
 .stat-word {
     font-weight: 600;
     font-size: 16px;
+    /* (MỚI) Cho phép hiển thị phiên âm cùng dòng */
+    display: flex;
+    flex-direction: column; /* Xếp (Từ + Phiên âm) trên (Nghĩa) */
+    align-items: flex-start;
 }
+
+/* (MỚI) Căn chỉnh cho phiên âm trong Thống kê */
+.stat-word .card-phonetic {
+    font-size: 14px;
+    font-weight: 400;
+    color: #555;
+    font-style: italic;
+}
+
+/* (MỚI) Căn chỉnh cho phiên âm trong Thẻ Nghe (Audio Card) */
+.audio-card .card-word {
+    font-size: 24px; /* Giữ kích thước cho icon loa */
+    line-height: 1.2;
+}
+
 .stat-level {
     font-weight: 700;
     font-size: 14px;
