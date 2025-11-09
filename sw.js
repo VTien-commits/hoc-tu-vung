@@ -8,7 +8,6 @@ const STATIC_ASSETS = [
     'index.html',
     'style.css',
     'main.js',
-    // 'words.json', // (Đã xóa)
     'manifest.json',
     'images/icon-192.png',
     'images/icon-512.png',
@@ -27,7 +26,10 @@ self.addEventListener('install', event => {
                     STATIC_ASSETS.map(url => {
                         // (CẬP NHẬT) Đối với các file bên ngoài (CDN), chúng ta cần Request
                         // mà không có credentials (no-cors) để tránh lỗi
-                        const request = new Request(url, { mode: 'no-cors' });
+                        // (Sửa lỗi) Chỉ dùng no-cors cho CDN
+                        const isCDN = url.startsWith('http');
+                        const request = isCDN ? new Request(url, { mode: 'no-cors' }) : url;
+                        
                         return cache.add(request).catch(reason => {
                             console.warn(`[SW] Không cache được ${url}: ${reason}`);
                         });
@@ -63,48 +65,36 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
     const url = new URL(event.request.url);
 
-    // (CẬP NHẬT) Chiến lược 0: Bỏ qua Google Apps Script (luôn lấy từ mạng)
-    // Điều này quan trọng để luôn nhận được danh sách từ vựng mới nhất
+    // Chiến lược 0: Bỏ qua Google Apps Script (luôn lấy từ mạng)
     if (url.href.includes('macros.google.com')) {
         event.respondWith(fetch(event.request));
         return;
     }
 
     // Chiến lược 1: Chỉ cache (Cache Only) cho file âm thanh
-    if (url.origin === 'https://ssl.gstatic.com' || url.href.includes('.mp3')) {
+    if (url.origin === 'https://api.dictionaryapi.dev' || url.href.includes('.mp3')) {
         event.respondWith(
             caches.open(AUDIO_CACHE_NAME).then(cache => {
                 return cache.match(event.request).then(cachedResponse => {
                     // Nếu có trong cache thì dùng, không thì tải mới
-                    return cachedResponse || fetch(event.request);
+                    if (cachedResponse) return cachedResponse;
+                    
+                    // (Sửa lỗi) Phải clone request khi fetch và cache
+                    return fetch(event.request).then(networkResponse => {
+                        cache.put(event.request, networkResponse.clone());
+                        return networkResponse;
+                    });
                 });
             })
         );
         return;
     }
 
-    // (MỚI) Chiến lược 2: Ưu tiên cache cho thư viện Excel
-    if (url.href.includes('cdnjs.cloudflare.com/ajax/libs/xlsx')) {
-        event.respondWith(
-            caches.match(event.request).then(cachedResponse => {
-                // Ưu tiên cache, nếu không có thì tải
-                return cachedResponse || fetch(event.request);
-            })
-        );
-        return;
-    }
-
-    // Chiến lược 3: Ưu tiên cache, nếu không thì lấy mạng (Cache First) cho các file tĩnh
+    // Chiến lược 2: Ưu tiên cache (Cache First) cho các file tĩnh (vỏ App + thư viện Excel)
     event.respondWith(
         caches.match(event.request).then(cachedResponse => {
-            if (cachedResponse) {
-                return cachedResponse;
-            }
-            // Nếu không có trong cache, tải từ mạng
-            return fetch(event.request).then(networkResponse => {
-                // Không cần cache lại ở đây vì đã cache lúc install
-                return networkResponse;
-            });
+            // Ưu tiên cache
+            return cachedResponse || fetch(event.request);
         })
     );
 });

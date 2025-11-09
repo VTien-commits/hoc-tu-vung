@@ -4,16 +4,15 @@
 // ***********************************************
 
 // --- Cài đặt Chung ---
-// (GIỮ NGUYÊN) Vẫn cần URL để TẢI dữ liệu
-const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyOeRAjUsPpgizXQOpuFnuElYQ7ZWwxUZJilRnymmcuCafZ965a1fPiEzVx5l_tP6c/exec'; 
+const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwim3tLgXKyPrLuowpheZpR_FrEpNzfRZM0YEqjEcp-Cm2O7O4eMQri4EchJpK-P_EC/exec'; 
 
-// (ĐÃ XÓA) Không cần khóa lưu allWords, vì nó được tải mỗi lần
-// const ALL_WORDS_STORAGE_KEY = 'vocabAppAllWords';
-const PROGRESS_STORAGE_KEY = 'vocabAppProgress'; // Khóa lưu "trí nhớ" cục bộ
+// (MỚI) Thêm cache cho từ vựng
+const ALL_WORDS_CACHE_KEY = 'vocabAppAllWordsCache';
+const PROGRESS_STORAGE_KEY = 'vocabAppProgress'; 
+const TIMER_SETTING_KEY = 'vocabAppTimer'; // (MỚI) Khóa lưu cài đặt timer
 const AUDIO_CACHE_NAME = 'audio-cache-v1';
-const WORDS_PER_ROUND = 6; // Số từ mỗi màn
+const WORDS_PER_ROUND = 6; 
 
-// Khoảng thời gian lặp lại (theo level), tính bằng ngày
 const SRS_LEVELS = {
     0: 0,   // Mới học (sẽ ôn lại trong màn này)
     1: 1,   // 1 ngày
@@ -26,28 +25,36 @@ const SRS_LEVELS = {
 const MAX_LEVEL = 6;
 
 // --- Biến toàn cục ---
-let allWords = []; // Kho từ vựng đầy đủ (tải từ Google Sheet)
-let progress = {}; // "Trí nhớ" về tiến độ học (lưu trên localStorage)
-let currentWords = []; // 6 từ trong màn hiện tại
+let allWords = []; 
+let progress = {}; 
+let currentWords = []; 
 let selectedLeft = null;
 let selectedRight = null;
 let correctPairs = 0;
 let totalScore = 0;
-let gameMode = null; // 'audio-only' hoặc 'phonetic-text'
-let selectedTopic = "Tất cả"; // Chủ đề đang chơi
-let isChecking = false; // Thêm biến "khóa" để chống lỗi race condition
+let gameMode = null; 
+let selectedTopic = "Tất cả"; 
+let isChecking = false; 
+
+// (MỚI) Biến cho Timer
+let timerInterval = null;
+let countdownTime = 60; // Mặc định 60s
 
 // --- DOM Elements ---
 let gameContainer, leftColumn, rightColumn, progressBar, scoreDisplay, nextRoundButton, loader, loaderText, gameTitle, clearCacheButton;
-let modeSelectionOverlay, modeAudioButton, modeTextButton, loadingStatus;
+let modeSelectionOverlay, modeAudioButton, modeTextButton;
+// (ĐÃ XÓA) loadingStatus
 let header, mainContent;
-let topicSelectionOverlay, topicListContainer, topicBackButton; // Chọn chủ đề
-let settingsModal, settingsButton, settingsCloseButton, statsButton, homeButton, reloadButton; // Cài đặt
-// (MỚI) Thêm nút xuất excel
+let topicSelectionOverlay, topicListContainer, topicBackButton; 
+let settingsModal, settingsButton, settingsCloseButton, statsButton, homeButton, reloadButton; 
 let exportExcelButton;
-// (ĐÃ XÓA) Không cần nút syncButton
-// let syncButton; 
-let statsModal, statsCloseButton, statsListContainer; // Thống kê
+let statsModal, statsCloseButton, statsListContainer; 
+
+// (MỚI) Các DOM element mới
+let timerDisplay, timerSettingInput;
+let loadOnlineButton, loadOnlineStatus;
+let statsTopicFilter;
+let resetProgressButton, confirmResetModal, confirmResetCancel, confirmResetConfirm;
 
 
 // --- Khởi động ---
@@ -72,7 +79,7 @@ async function initializeApp() {
     modeSelectionOverlay = document.getElementById('mode-selection-overlay');
     modeAudioButton = document.getElementById('mode-audio-button');
     modeTextButton = document.getElementById('mode-text-button');
-    loadingStatus = document.getElementById('loading-status');
+    // (ĐÃ XÓA) loadingStatus
 
     // Màn hình 2: Chọn chủ đề
     topicSelectionOverlay = document.getElementById('topic-selection-overlay');
@@ -82,8 +89,9 @@ async function initializeApp() {
     // Màn hình 3: Các nút Header
     homeButton = document.getElementById('home-button');
     settingsButton = document.getElementById('settings-button');
-    // (ĐÃ XÓA) Không cần nút sync
-    // syncButton = document.getElementById('sync-button'); 
+
+    // (MỚI) Timer
+    timerDisplay = document.getElementById('timer');
 
     // Modal Cài đặt
     settingsModal = document.getElementById('settings-modal');
@@ -91,13 +99,24 @@ async function initializeApp() {
     statsButton = document.getElementById('stats-button');
     clearCacheButton = document.getElementById('clear-cache-button');
     reloadButton = document.getElementById('reload-button');
-    // (MỚI) Gán nút xuất excel
     exportExcelButton = document.getElementById('export-excel-button');
+    
+    // (MỚI) Cài đặt
+    timerSettingInput = document.getElementById('timer-setting');
+    loadOnlineButton = document.getElementById('load-online-button');
+    loadOnlineStatus = document.getElementById('load-online-status');
+    resetProgressButton = document.getElementById('reset-progress-button');
 
     // Modal Thống kê
     statsModal = document.getElementById('stats-modal');
     statsCloseButton = document.getElementById('stats-close-button');
     statsListContainer = document.getElementById('stats-list');
+    statsTopicFilter = document.getElementById('stats-topic-filter'); // (MỚI)
+
+    // (MỚI) Modal Xác nhận
+    confirmResetModal = document.getElementById('confirm-reset-modal');
+    confirmResetCancel = document.getElementById('confirm-reset-cancel');
+    confirmResetConfirm = document.getElementById('confirm-reset-confirm');
 
     // 2. Gán tất cả sự kiện
     addEventListeners();
@@ -112,39 +131,62 @@ async function initializeApp() {
         }
     }
 
-    // 4. Lấy dữ liệu từ vựng (từ Google Sheet) và "trí nhớ" (từ LocalStorage)
-    await loadData();
+    // 4. (CẬP NHẬT) Tải dữ liệu từ Cache trước, sau đó fetch ngầm
+    
+    // Tải tiến độ (sync)
+    progress = loadProgress();
+    
+    // Tải cài đặt timer (sync)
+    countdownTime = localStorage.getItem(TIMER_SETTING_KEY) || 60;
+    timerSettingInput.value = countdownTime;
 
-    // 5. (ĐÃ XÓA) Không cần tự động đồng bộ
-    // setInterval(syncProgressToSheet, 300000); 
+    // Tải từ vựng từ cache (sync)
+    allWords = loadAllWordsCache();
+
+    if (allWords.length > 0) {
+        // Nếu có cache, cho phép chơi ngay
+        syncProgress(allWords); // Đồng bộ cache từ vựng và cache tiến độ
+        modeAudioButton.disabled = false;
+        modeTextButton.disabled = false;
+    }
+
+    // Tải ngầm dữ liệu mới từ Google Sheet
+    await loadDataOnline(false); // (false = không phải do người dùng nhấn)
 }
 
 // Gán tất cả sự kiện
 function addEventListeners() {
-    // Màn hình 1: Chọn chế độ
+    // Màn hình 1
     modeAudioButton.addEventListener('click', () => selectGameMode('audio-only'));
     modeTextButton.addEventListener('click', () => selectGameMode('phonetic-text'));
     settingsButton.addEventListener('click', openSettingsModal);
     reloadButton.addEventListener('click', hardReloadApp); 
 
-    // Màn hình 2: Chọn chủ đề
+    // Màn hình 2
     topicBackButton.addEventListener('click', showModeSelectionScreen);
 
-    // Màn hình 3: Game
-    nextRoundButton.addEventListener('click', startNewRound);
+    // Màn hình 3
+    nextRoundButton.addEventListener('click', startNewRound); // Sẽ bị ghi đè khi chơi lại
     homeButton.addEventListener('click', () => window.location.reload()); 
-    // (ĐÃ XÓA) Không cần sự kiện cho nút sync
-    // syncButton.addEventListener('click', syncProgressToSheet); 
 
     // Modal Cài đặt
     settingsCloseButton.addEventListener('click', closeSettingsModal);
     clearCacheButton.addEventListener('click', clearAudioCache);
     statsButton.addEventListener('click', openStatsModal);
-    // (MỚI) Thêm sự kiện cho nút xuất excel
     exportExcelButton.addEventListener('click', exportToExcel);
+    
+    // (MỚI) Sự kiện cài đặt
+    timerSettingInput.addEventListener('change', saveTimerSetting);
+    loadOnlineButton.addEventListener('click', () => loadDataOnline(true)); // (true = do người dùng nhấn)
+    resetProgressButton.addEventListener('click', openConfirmResetModal);
 
     // Modal Thống kê
     statsCloseButton.addEventListener('click', closeStatsModal);
+    statsTopicFilter.addEventListener('change', populateStatsList); // (MỚI)
+
+    // (MỚI) Modal Xác nhận
+    confirmResetCancel.addEventListener('click', closeConfirmResetModal);
+    confirmResetConfirm.addEventListener('click', resetAllProgress);
 }
 
 // Hàm Tải lại ứng dụng (Gỡ Service Worker)
@@ -163,7 +205,6 @@ async function hardReloadApp() {
             }
         }
         
-        // Đợi 1s để gỡ
         setTimeout(() => {
             window.location.reload();
         }, 1000);
@@ -175,48 +216,63 @@ async function hardReloadApp() {
 }
 
 
-// (CẬP NHẬT) Tải dữ liệu từ Google Sheet và LocalStorage
-async function loadData() {
+// (CẬP NHẬT) Tải dữ liệu từ Google Sheet
+async function loadDataOnline(isManual = false) {
+    if (isManual) {
+        loadOnlineStatus.style.display = 'block';
+        loadOnlineStatus.textContent = "Đang tải từ Sheet...";
+        loadOnlineStatus.style.color = "var(--text-color)";
+    }
+
+    const oldWordCount = allWords.length;
+
     try {
-        // Kiểm tra URL đã được cài đặt chưa
-        if (!GOOGLE_APPS_SCRIPT_URL || GOOGLE_APPS_SCRIPT_URL === 'DÁN_URL_TRIỂN_KHAI_MỚI_CỦA_BẠN_VÀO_ĐÂY') {
+        if (!GOOGLE_APPS_SCRIPT_URL || GOOGLE_APPS_SCRIPT_URL.includes('DÁN_URL')) {
              throw new Error('URL Apps Script chưa được cài đặt.');
         }
         
-        // 1. Tải kho từ vựng từ Google Sheet (NHƯ CŨ)
         const response = await fetch(GOOGLE_APPS_SCRIPT_URL);
         if (!response.ok) throw new Error('Không thể tải dữ liệu từ Google Sheet');
         const result = await response.json();
         
         if (!result.success || !result.data) throw new Error(result.error || 'Lỗi cấu trúc dữ liệu trả về');
         
-        allWords = result.data; // Lưu kho từ vựng
+        const newWords = result.data;
         
-        // 2. Tải "trí nhớ" từ LocalStorage (như cũ)
-        progress = loadProgress();
-
-        // 3. Đồng bộ "trí nhớ" (như cũ, nhưng giờ dùng data từ Sheet)
-        // Đảm bảo mọi từ trên Sheet đều có trong "trí nhớ"
+        // (MỚI) Lưu từ vựng vào cache
+        saveAllWordsCache(newWords); 
+        allWords = newWords; // Cập nhật biến toàn cục
+        
+        // (QUAN TRỌNG) Đồng bộ tiến độ (giữ nguyên level cũ)
         syncProgress(allWords);
 
-        // 4. Cập nhật UI khi SẴN SÀNG
-        loadingStatus.textContent = "Sẵn sàng! Hãy chọn chế độ.";
-        loadingStatus.style.color = "var(--correct-color)"; // Màu xanh
-        
-        // Bật các nút
+        // Bật nút (phòng trường hợp cache rỗng lúc đầu)
         modeAudioButton.disabled = false;
         modeTextButton.disabled = false;
 
+        if (isManual) {
+            const newWordCount = allWords.length;
+            const diff = newWordCount - oldWordCount;
+            let diffMessage = `Đã tải xong! Hiện có ${newWordCount} từ.`;
+            if (diff > 0) diffMessage += ` (Thêm ${diff} từ mới).`;
+            else if (diff < 0) diffMessage += ` (Bớt ${Math.abs(diff)} từ).`;
+            
+            loadOnlineStatus.textContent = diffMessage;
+            loadOnlineStatus.style.color = "var(--correct-color)";
+            setTimeout(() => { loadOnlineStatus.style.display = 'none'; }, 4000);
+        }
+
     } catch (error) {
-        console.error("Lỗi khi khởi động:", error);
-        loadingStatus.textContent = `Lỗi: ${error.message}. Vui lòng tải lại.`;
-        loadingStatus.style.color = "var(--incorrect-color)"; // Màu đỏ
-        alert(`Lỗi tải dữ liệu: ${error.message}. Hãy kiểm tra kết nối hoặc URL backend.`);
+        console.error("Lỗi khi tải online:", error);
+        if (isManual) {
+            loadOnlineStatus.textContent = `Tải bị lỗi: ${error.message}`;
+            loadOnlineStatus.style.color = "var(--incorrect-color)";
+        } else if (allWords.length === 0) {
+            // Chỉ báo lỗi khi khởi động nếu không có cache
+            alert(`Lỗi tải dữ liệu: ${error.message}. Hãy kiểm tra kết nối và thử "Load Data Online" trong Cài đặt.`);
+        }
     }
 }
-
-// (ĐÃ XÓA) Không cần hàm getDefaultWords
-// (ĐÃ XÓA) Không cần hàm saveAllWords
 
 // Hiển thị màn hình 1
 function showModeSelectionScreen() {
@@ -236,19 +292,15 @@ function selectGameMode(mode) {
 
 // TẠO DANH SÁCH CHỦ ĐỀ
 function populateTopicList() {
-    topicListContainer.innerHTML = ''; // Xóa danh sách cũ
-    
-    // 1. Lấy tất cả chủ đề
+    topicListContainer.innerHTML = ''; 
     const topics = new Set(allWords.map(word => word.topic || "Khác"));
     
-    // 2. Tạo nút "Tất cả"
     const allButton = document.createElement('button');
     allButton.className = 'action-button';
     allButton.textContent = 'Tất cả';
     allButton.addEventListener('click', () => selectTopic('Tất cả'));
     topicListContainer.appendChild(allButton);
     
-    // 3. Tạo nút cho mỗi chủ đề
     topics.forEach(topic => {
         const topicButton = document.createElement('button');
         topicButton.className = 'action-button';
@@ -264,47 +316,64 @@ function selectTopic(topic) {
     topicSelectionOverlay.style.display = 'none';
     header.style.display = 'flex';
     mainContent.style.display = 'block';
+    
+    // (CẬP NHẬT) Reset điểm khi bắt đầu game mới
+    totalScore = 0;
+    scoreDisplay.textContent = totalScore;
+
     startNewRound();
 }
 
-// (ĐÃ XÓA) Hàm syncProgressToSheet
-// async function syncProgressToSheet() { ... }
 
+// --- Logic SRS (Cốt lõi) ---
 
-// --- Logic SRS (Cốt lõi - Giữ nguyên) ---
+// (MỚI) Tải/Lưu từ vựng vào cache
+function loadAllWordsCache() {
+    const data = localStorage.getItem(ALL_WORDS_CACHE_KEY);
+    return data ? JSON.parse(data) : [];
+}
+function saveAllWordsCache(words) {
+    localStorage.setItem(ALL_WORDS_CACHE_KEY, JSON.stringify(words));
+}
 
+// Tải/Lưu tiến độ (progress)
 function loadProgress() {
     const data = localStorage.getItem(PROGRESS_STORAGE_KEY);
     return data ? JSON.parse(data) : {};
 }
 
 function saveProgress() {
-    // Chỉ lưu 'progress' vào localStorage
     localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(progress));
 }
 
-// SyncProgress giờ nhận 'wordsFromSheet'
+// (MỚI) Lưu cài đặt Timer
+function saveTimerSetting() {
+    countdownTime = parseInt(timerSettingInput.value) || 60;
+    if (countdownTime < 10) countdownTime = 10; // Tối thiểu 10s
+    timerSettingInput.value = countdownTime;
+    localStorage.setItem(TIMER_SETTING_KEY, countdownTime);
+}
+
+// Đồng bộ từ vựng (Sheet) và tiến độ (cache)
 function syncProgress(wordsFromSheet) {
-    // const today = getTodayString(); // Không cần today ở đây nữa
     let updated = false;
     
-    // Đảm bảo mọi từ trong Sheet đều có trong "trí nhớ"
     for (const word of wordsFromSheet) {
         if (!progress[word.id]) {
-            // Nếu từ này CHƯA có trong progress (localStorage)
-            // Lấy dữ liệu (level, nextReview) từ Sheet làm mặc định
+            // Nếu từ này MỚI (chưa có trong cache tiến độ)
+            // Lấy level/review từ Sheet làm mặc định (nếu là từ mới thì trên Sheet là 0)
             progress[word.id] = {
                 level: word.level, 
                 nextReview: word.nextReview,
-                phonetic: null // Phiên âm sẽ được tải khi cần
+                phonetic: null 
             };
             updated = true;
         } else if (typeof progress[word.id].phonetic === 'undefined') {
-            // Đảm bảo các từ cũ (đã có trong progress) cũng có trường phiên âm
+            // Đảm bảo các từ cũ có trường phiên âm
             progress[word.id].phonetic = null;
             updated = true;
         }
-        // Nếu từ ĐÃ có trong progress, chúng ta KHÔNG làm gì cả
+        // Nếu từ ĐÃ có trong progress, chúng ta KHÔNG làm gì
         // để giữ lại tiến độ đã lưu trong localStorage
     }
     
@@ -326,30 +395,23 @@ function getNextReviewDate(level) {
 function getWordsToReview(count = WORDS_PER_ROUND) {
     const today = getTodayString();
     
-    // 1. Lọc 'allWords' theo chủ đề đã chọn
     const wordsInTopic = (selectedTopic === "Tất cả")
         ? allWords
         : allWords.filter(word => (word.topic || "Khác") === selectedTopic);
 
-    if (wordsInTopic.length === 0) {
-        return []; // Không có từ nào trong chủ đề này
-    }
+    if (wordsInTopic.length === 0) return []; 
 
-    // 2. Ưu tiên từ cần ôn tập (chỉ trong chủ đề này)
-    // (QUAN TRỌNG) Lấy level/nextReview từ 'progress' (localStorage)
+    // Lấy level/nextReview từ 'progress' (localStorage)
     const reviewQueue = wordsInTopic
         .filter(word => progress[word.id] && progress[word.id].nextReview <= today)
         .sort(() => Math.random() - 0.5);
 
-    // 3. Lấy thêm từ mới (chỉ trong chủ đề này)
     const newQueue = wordsInTopic
         .filter(word => progress[word.id] && progress[word.id].level === 0 && !reviewQueue.find(w => w.id === word.id))
         .sort(() => Math.random() - 0.5);
 
-    // 4. Kết hợp lại
     let wordsForRound = [...reviewQueue, ...newQueue];
 
-    // 5. Nếu vẫn không đủ, lấy từ bất kỳ (chỉ trong chủ đề này)
     if (wordsForRound.length < count) {
         const extraWords = wordsInTopic
             .filter(word => !wordsForRound.find(w => w.id === word.id))
@@ -357,7 +419,6 @@ function getWordsToReview(count = WORDS_PER_ROUND) {
         wordsForRound = [...wordsForRound, ...extraWords];
     }
 
-    // Đảm bảo số lượng trả về không lớn hơn số từ trong chủ đề
     const finalCount = Math.min(count, wordsInTopic.length);
     return wordsForRound.slice(0, finalCount);
 }
@@ -366,7 +427,6 @@ function getWordsToReview(count = WORDS_PER_ROUND) {
 function updateWordProgress(wordId, isCorrect) {
     if (!progress[wordId]) return;
 
-    // Lấy level hiện tại từ 'progress'
     let currentLevel = progress[wordId].level;
 
     if (isCorrect) {
@@ -375,52 +435,68 @@ function updateWordProgress(wordId, isCorrect) {
         currentLevel = Math.max(currentLevel - 1, 0);
     }
 
-    // Cập nhật 'progress'
     progress[wordId].level = currentLevel;
     progress[wordId].nextReview = getNextReviewDate(currentLevel);
     
-    // (ĐÃ XÓA) Không cập nhật 'allWords'
-    // const wordInAllWords = allWords.find(w => w.id === wordId);
-    // if (wordInAllWords) { ... }
-
-    // Chỉ lưu 'progress' vào localStorage
-    saveProgress(); 
+    saveProgress(); // Chỉ lưu 'progress' vào localStorage
 }
 
 
-// --- Logic Game (Giữ nguyên) ---
+// --- Logic Game (Đã cập nhật) ---
 
+// (CẬP NHẬT) Bắt đầu màn mới
 function startNewRound() {
     showLoader(false);
-    nextRoundButton.style.display = 'none';
     gameContainer.style.opacity = 1;
-    leftColumn.innerHTML = '';
-    rightColumn.innerHTML = '';
     selectedLeft = null;
     selectedRight = null;
     correctPairs = 0;
 
-    // 1. Lấy từ để chơi
-    currentWords = getWordsToReview();
-    if (currentWords.length === 0) {
+    // 1. Lấy từ
+    const words = getWordsToReview();
+    if (words.length === 0) {
         if (allWords.length === 0) {
             gameTitle.textContent = "Lỗi tải dữ liệu";
-        } else if (selectedTopic !== "Tất cả") {
+        } else if (selectedTopic !== "Tất cả" && allWords.filter(w => (w.topic || "Khác") === selectedTopic).length === 0) {
              gameTitle.textContent = "Không có từ trong chủ đề này!";
         } else {
              gameTitle.textContent = "Bạn đã học hết từ!";
         }
+        nextRoundButton.style.display = 'none'; // Ẩn nút Next nếu không có từ
+        timerDisplay.style.display = 'none'; // Ẩn timer
         return;
     }
-    
-    // 2. TẢI TRƯỚC ÂM THANH VÀ PHIÊN ÂM (PRELOAD)
-    showLoader(true, "Đang chuẩn bị dữ liệu...");
-    preloadDataForRound(currentWords); 
-    showLoader(false);
 
-    // 3. Cập nhật tiêu đề game
+    // 2. Cập nhật tiêu đề game
     const modeTitle = gameMode === 'audio-only' ? "Nghe và nối" : "Đọc và nối";
     gameTitle.textContent = `${modeTitle} (${selectedTopic})`;
+    
+    // 3. Tải trước âm thanh (không cần đợi)
+    preloadDataForRound(words); 
+    
+    // 4. (MỚI) Setup màn chơi
+    setupRound(words);
+}
+
+// (MỚI) Hàm setup màn chơi (dùng cho cả chơi mới và chơi lại)
+function setupRound(wordsToPlay) {
+    currentWords = wordsToPlay; // Lưu từ của màn này
+    
+    // Reset giao diện
+    gameContainer.style.opacity = 1;
+    leftColumn.innerHTML = '';
+    rightColumn.innerHTML = '';
+    isChecking = false;
+    
+    // Đảm bảo nút Next đúng trạng thái
+    nextRoundButton.textContent = "Next";
+    nextRoundButton.style.display = 'block';
+    nextRoundButton.disabled = true; // (MỚI) Luôn mờ khi bắt đầu
+    timerDisplay.style.display = 'block'; // Hiển thị timer
+
+    // Gắn lại listener chuẩn
+    nextRoundButton.removeEventListener('click', handleReplayClick);
+    nextRoundButton.addEventListener('click', startNewRound);
 
     // 4. Tạo thẻ
     const leftItems = currentWords.map(word => ({
@@ -438,7 +514,8 @@ function startNewRound() {
     shuffleArray(leftItems).forEach(item => leftColumn.appendChild(createCard(item, 'left')));
     shuffleArray(rightItems).forEach(item => rightColumn.appendChild(createCard(item, 'right')));
 
-    updateProgress();
+    updateProgress(); // Reset thanh progress bar
+    startTimer(); // Bắt đầu đếm ngược
 }
 
 function createCard(item, side) {
@@ -448,22 +525,16 @@ function createCard(item, side) {
     card.dataset.side = side;
     card.dataset.word = item.word;
 
-    // Luôn lấy phiên âm từ 'progress'
     const wordPhonetic = progress[item.id]?.phonetic;
 
     if (item.type === 'audio-only') {
-        // CHẾ ĐỘ AUDIO (Thêm phiên âm)
         card.classList.add('audio-card');
-        
         const cardContent = document.createElement('div');
         cardContent.className = 'card-content';
-        
         const wordEl = document.createElement('div');
         wordEl.className = 'card-word';
-        wordEl.textContent = '🔊'; // Icon loa
+        wordEl.textContent = '🔊'; 
         cardContent.appendChild(wordEl);
-
-        // Thêm phiên âm nếu có
         if (wordPhonetic) {
             const phoneticEl = document.createElement('div');
             phoneticEl.className = 'card-phonetic';
@@ -471,19 +542,14 @@ function createCard(item, side) {
             cardContent.appendChild(phoneticEl);
         }
         card.appendChild(cardContent);
-
     } else if (item.type === 'phonetic-text' && side === 'left') {
-        // CHẾ ĐỘ TEXT (Bên trái) - Hiển thị Word + Phonetic
         card.classList.add('text-audio-card');
-        
         const cardContent = document.createElement('div');
         cardContent.className = 'card-content';
-        
         const wordEl = document.createElement('div');
         wordEl.className = 'card-word';
         wordEl.textContent = item.text;
         cardContent.appendChild(wordEl);
-
         if (wordPhonetic) {
             const phoneticEl = document.createElement('div');
             phoneticEl.className = 'card-phonetic';
@@ -491,9 +557,7 @@ function createCard(item, side) {
             cardContent.appendChild(phoneticEl);
         }
         card.appendChild(cardContent);
-
     } else {
-        // CHẾ ĐỘ TEXT (Bên phải - Tiếng Việt)
         const cardContent = document.createElement('div');
         cardContent.className = 'card-content';
         const wordEl = document.createElement('div');
@@ -508,7 +572,7 @@ function createCard(item, side) {
 }
 
 
-// Xử lý nhấn thẻ (Giữ nguyên)
+// Xử lý nhấn thẻ
 function handleCardClick(event) {
     const selectedCard = event.currentTarget;
     
@@ -520,6 +584,7 @@ function handleCardClick(event) {
         playAudio(selectedCard.dataset.word);
     }
 
+    // (Bỏ chọn)
     if (side === 'left' && selectedCard === selectedLeft) {
         selectedLeft.classList.remove('selected');
         selectedLeft = null;
@@ -531,6 +596,7 @@ function handleCardClick(event) {
         return;
     }
 
+    // (Chọn)
     selectedCard.classList.add('selected');
     if (side === 'left') {
         if (selectedLeft) selectedLeft.classList.remove('selected');
@@ -545,7 +611,7 @@ function handleCardClick(event) {
     }
 }
 
-// Kiểm tra (Giữ nguyên)
+// Kiểm tra
 function checkMatch() {
     const isMatch = selectedLeft.dataset.id === selectedRight.dataset.id;
     const wordId = selectedLeft.dataset.id;
@@ -558,11 +624,14 @@ function checkMatch() {
         selectedRight.classList.add('correct');
         correctPairs++;
         totalScore += 10;
-        updateWordProgress(wordId, true); // Lưu vào localStorage
+        updateWordProgress(wordId, true); 
+        updateProgress(); // Cập nhật thanh progress
 
         if (correctPairs === currentWords.length) {
+            // (MỚI) Thắng
+            clearInterval(timerInterval); // Dừng timer
+            nextRoundButton.disabled = false; // Bật nút "Next"
             gameContainer.style.opacity = 0.5;
-            nextRoundButton.style.display = 'block';
         }
         
         selectedLeft = null;
@@ -573,7 +642,8 @@ function checkMatch() {
         selectedLeft.classList.add('incorrect');
         selectedRight.classList.add('incorrect');
         totalScore = Math.max(0, totalScore - 5);
-        updateWordProgress(wordId, false); // Lưu vào localStorage
+        updateWordProgress(wordId, false); 
+        updateProgress(); // Cập nhật điểm
 
         setTimeout(() => {
             selectedLeft.classList.remove('incorrect', 'selected', 'disabled');
@@ -585,24 +655,86 @@ function checkMatch() {
     }
 }
 
-// Cập nhật thanh tiến trình (Giữ nguyên)
+// Cập nhật thanh tiến trình
 function updateProgress() {
     const progressPercent = (correctPairs / currentWords.length) * 100;
     progressBar.style.width = `${progressPercent}%`;
     scoreDisplay.textContent = totalScore;
 }
 
-// --- Các hàm hỗ trợ (Đã cập nhật) ---
+// --- (MỚI) Logic Timer ---
+
+function startTimer() {
+    clearInterval(timerInterval); // Xóa timer cũ
+    let timeLeft = countdownTime;
+    timerDisplay.classList.remove('warning');
+    updateTimerDisplay(timeLeft);
+
+    timerInterval = setInterval(() => {
+        timeLeft--;
+        updateTimerDisplay(timeLeft);
+
+        if (timeLeft <= 5 && timeLeft > 0) {
+            timerDisplay.classList.add('warning');
+        }
+
+        if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            handleTimeUp();
+        }
+    }, 1000);
+}
+
+function updateTimerDisplay(seconds) {
+    const min = Math.floor(seconds / 60);
+    const sec = seconds % 60;
+    timerDisplay.textContent = `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+}
+
+// (MỚI) Xử lý khi hết giờ
+function handleTimeUp() {
+    if (correctPairs === currentWords.length) return; // Đã thắng
+
+    isChecking = true; // Khóa bảng
+    gameContainer.style.opacity = 0.5;
+    // Vô hiệu hóa tất cả thẻ
+    document.querySelectorAll('.card').forEach(card => card.classList.add('disabled'));
+    
+    // Đổi nút "Next" thành "Chơi lại"
+    nextRoundButton.textContent = "Chơi lại";
+    nextRoundButton.disabled = false; // Bật nút
+    
+    // Gắn listener cho nút "Chơi lại"
+    nextRoundButton.removeEventListener('click', startNewRound);
+    nextRoundButton.addEventListener('click', handleReplayClick);
+}
+
+// (MỚI) Xử lý khi nhấn "Chơi lại"
+function handleReplayClick() {
+    // Gắn lại listener chuẩn
+    nextRoundButton.removeEventListener('click', handleReplayClick);
+    nextRoundButton.addEventListener('click', startNewRound);
+
+    // Trừ điểm
+    totalScore = Math.max(0, totalScore - (currentWords.length * 2)); // Trừ 2 điểm mỗi từ
+    scoreDisplay.textContent = totalScore;
+
+    // Reset trạng thái màn chơi
+    selectedLeft = null;
+    selectedRight = null;
+    correctPairs = 0;
+    
+    // Chơi lại màn (dùng lại currentWords)
+    setupRound(currentWords); 
+}
+
+
+// --- Các hàm hỗ trợ ---
 
 // (CẬP NHẬT) Xuất dữ liệu ra Excel
 function exportToExcel() {
-    console.log("Đang chuẩn bị xuất Excel...");
     showLoader(true, "Đang xuất dữ liệu...");
-
     try {
-        // 1. Chuẩn bị dữ liệu
-        // Lấy dữ liệu tĩnh từ 'allWords' (từ Sheet)
-        // Lấy dữ liệu động (level, review, phonetic) từ 'progress' (từ localStorage)
         const dataToExport = allWords.map(word => {
             const progressData = progress[word.id] || {}; // Lấy tiến độ từ localStorage
             return {
@@ -616,14 +748,10 @@ function exportToExcel() {
             };
         });
 
-        // 2. Tạo worksheet từ JSON
         const ws = XLSX.utils.json_to_sheet(dataToExport);
-
-        // 3. Tạo workbook mới và thêm worksheet vào
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "VocabProgress");
 
-        // 4. Ghi file và kích hoạt tải về
         const today = new Date().toISOString().split('T')[0];
         XLSX.writeFile(wb, `Vocab_Export_${today}.xlsx`);
 
@@ -638,13 +766,11 @@ function exportToExcel() {
 }
 
 
-// Xóa cache âm thanh (Giữ nguyên)
+// Xóa cache âm thanh
 async function clearAudioCache() {
-    console.log('Đang xóa cache âm thanh theo yêu cầu...');
     showLoader(true, "Đang xóa cache âm thanh...");
     try {
         await caches.delete(AUDIO_CACHE_NAME);
-        console.log('Đã xóa cache âm thanh thành công.');
         await caches.open(AUDIO_CACHE_NAME); 
         
         showLoader(true, "Đã xóa xong!");
@@ -656,49 +782,44 @@ async function clearAudioCache() {
     }
 }
 
-// Chuẩn hóa từ (Giữ nguyên)
+// Chuẩn hóa từ
 function normalizeWord(word) {
     if (!word) return "";
     return word.trim().toLowerCase();
 }
 
-// Tải trước (Giữ nguyên)
+// Tải trước
 function preloadDataForRound(words) {
-    console.log(`Đang tải trước dữ liệu cho ${words.length} từ...`);
     words.forEach(word => {
         if (!word.english) return;
         fetchAndCacheWordData(word.english, word.id, null, false); 
     });
 }
 
-// Phát âm thanh (Giữ nguyên)
+// Phát âm thanh
 async function playAudio(word) {
     if (!word) return;
     
     const audioButton = document.querySelector(`.card[data-word="${word}"][data-side="left"]`);
     if (audioButton) audioButton.classList.add('selected'); 
 
-    // Lấy wordId từ allWords
     const wordData = allWords.find(w => w.english === word);
     if (!wordData) {
         console.error(`Không tìm thấy wordData cho: ${word}`);
         return;
     }
-
     fetchAndCacheWordData(word, wordData.id, audioButton, true);
 }
 
-// Lấy ÂM THANH và PHIÊN ÂM (Giữ nguyên)
+// Lấy ÂM THANH và PHIÊN ÂM
 async function fetchAndCacheWordData(word, wordId, audioButtonElement, shouldPlay) {
     let normalizedWord = normalizeWord(word);
     if (!normalizedWord) return;
 
-    // Xử lý Động từ Bất quy tắc (chỉ lấy từ đầu tiên)
     if (normalizedWord.includes('-') || normalizedWord.split(' ').length > 2) {
         normalizedWord = normalizedWord.split(/[\s-]+/)[0];
     }
 
-    // 1. Kiểm tra xem đã có đủ dữ liệu chưa
     const cache = await caches.open(AUDIO_CACHE_NAME);
     const hasPhonetic = progress[wordId]?.phonetic;
     
@@ -713,23 +834,16 @@ async function fetchAndCacheWordData(word, wordId, audioButtonElement, shouldPla
 
         if (data[0] && data[0].phonetics) {
             let phoneticData = data[0].phonetics.find(p => p.audio && p.audio !== "" && p.text);
-            if (!phoneticData) {
-                phoneticData = data[0].phonetics.find(p => p.audio && p.audio !== "");
-            }
+            if (!phoneticData) phoneticData = data[0].phonetics.find(p => p.audio && p.audio !== "");
             if (!phoneticData && !hasPhonetic) {
                 const textOnlyPhonetic = data[0].phonetics.find(p => p.text);
                 if(textOnlyPhonetic) phoneticText = textOnlyPhonetic.text;
             }
-
             if (phoneticData) {
-                if (!phoneticText && phoneticData.text) {
-                    phoneticText = phoneticData.text;
-                }
+                if (!phoneticText && phoneticData.text) phoneticText = phoneticData.text;
                 if(phoneticData.audio) {
                     audioUrl = phoneticData.audio;
-                    if (audioUrl.startsWith("//")) {
-                        audioUrl = "https" + audioUrl;
-                    }
+                    if (audioUrl.startsWith("//")) audioUrl = "https" + audioUrl;
                 }
             }
         }
@@ -738,7 +852,6 @@ async function fetchAndCacheWordData(word, wordId, audioButtonElement, shouldPla
             progress[wordId].phonetic = phoneticText;
             saveProgress();
             
-            // Cập nhật giao diện nếu thẻ đã được vẽ (cho preload)
             const cardEl = document.querySelector(`.card[data-id="${wordId}"] .card-content`);
             if (cardEl && !cardEl.querySelector('.card-phonetic')) {
                 const phoneticEl = document.createElement('div');
@@ -777,7 +890,7 @@ async function fetchAndCacheWordData(word, wordId, audioButtonElement, shouldPla
                     audioButtonElement.innerHTML = "Không có audio";
                     audioButtonElement.classList.remove('selected');
                     setTimeout(() => {
-                        audioButtonElement.innerHTML = originalHTML;
+                        if(audioButtonElement) audioButtonElement.innerHTML = originalHTML;
                     }, 1500);
                 }
             }
@@ -792,7 +905,7 @@ async function fetchAndCacheWordData(word, wordId, audioButtonElement, shouldPla
 }
 
 
-// Phát audio (Giữ nguyên)
+// Phát audio
 function playAudioFromUrl(url, audioButton) {
     const audio = new Audio(url);
     
@@ -802,7 +915,6 @@ function playAudioFromUrl(url, audioButton) {
         }
         URL.revokeObjectURL(url);
     };
-    
     audio.onerror = () => {
         console.error("Lỗi khi phát file audio.");
         if (audioButton && audioButton !== selectedLeft) {
@@ -810,18 +922,17 @@ function playAudioFromUrl(url, audioButton) {
         }
         URL.revokeObjectURL(url);
     };
-
     audio.play();
 }
 
-// Hiển thị Loader (Giữ nguyên)
+// Hiển thị Loader
 function showLoader(show, message = "Đang tải...") {
     if (!loader) return;
     loaderText.textContent = message;
     loader.style.display = show ? 'flex' : 'none';
 }
 
-// Xáo trộn mảng (Giữ nguyên)
+// Xáo trộn mảng
 function shuffleArray(array) {
     for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -829,6 +940,36 @@ function shuffleArray(array) {
     }
     return array;
 }
+
+// --- (MỚI) Các hàm Modal ---
+
+// (MỚI) Học lại từ đầu
+function openConfirmResetModal() {
+    settingsModal.style.display = 'none';
+    confirmResetModal.style.display = 'flex';
+}
+function closeConfirmResetModal() {
+    confirmResetModal.style.display = 'none';
+    settingsModal.style.display = 'flex';
+}
+function resetAllProgress() {
+    showLoader(true, "Đang reset tiến độ...");
+    const today = getTodayString();
+    
+    // Lặp qua tất cả tiến độ và set về 0
+    Object.keys(progress).forEach(wordId => {
+        progress[wordId].level = 0;
+        progress[wordId].nextReview = today;
+    });
+
+    saveProgress(); // Lưu tiến độ đã reset
+    
+    setTimeout(() => {
+        showLoader(false);
+        window.location.reload(); // Tải lại ứng dụng
+    }, 1500);
+}
+
 
 // Mở Modal Cài đặt
 function openSettingsModal() {
@@ -838,8 +979,24 @@ function closeSettingsModal() {
     settingsModal.style.display = 'none';
 }
 
-// Mở Modal Thống kê
+// (CẬP NHẬT) Mở Modal Thống kê
 function openStatsModal() {
+    // (MỚI) Tạo danh sách lọc chủ đề
+    statsTopicFilter.innerHTML = '';
+    const topics = new Set(allWords.map(word => word.topic || "Khác"));
+    
+    const allOption = document.createElement('option');
+    allOption.value = 'Tất cả';
+    allOption.textContent = 'Tất cả chủ đề';
+    statsTopicFilter.appendChild(allOption);
+    
+    topics.forEach(topic => {
+        const topicOption = document.createElement('option');
+        topicOption.value = topic;
+        topicOption.textContent = topic;
+        statsTopicFilter.appendChild(topicOption);
+    });
+
     populateStatsList(); // Tạo danh sách
     statsModal.style.display = 'flex';
 }
@@ -847,19 +1004,27 @@ function closeStatsModal() {
     statsModal.style.display = 'none';
 }
 
-// (CẬP NHẬT) Tạo danh sách Thống kê
+// (CẬP NHẬT) Tạo danh sách Thống kê (lọc theo chủ đề)
 function populateStatsList() {
     statsListContainer.innerHTML = ''; // Xóa cũ
     
-    // 1. Lấy tất cả từ trong 'allWords' và 'progress'
-    const wordsFromProgress = allWords.map(word => {
-        const progressData = progress[word.id] || {}; // Lấy tiến độ từ localStorage
+    // (MỚI) Lấy chủ đề được chọn
+    const selectedFilterTopic = statsTopicFilter.value;
+    
+    // (MỚI) Lọc 'allWords' dựa trên chủ đề
+    const wordsToShow = (selectedFilterTopic === 'Tất cả')
+        ? allWords
+        : allWords.filter(word => (word.topic || "Khác") === selectedFilterTopic);
+
+    // 1. Lấy tất cả từ trong 'wordsToShow' và 'progress'
+    const wordsFromProgress = wordsToShow.map(word => {
+        const progressData = progress[word.id] || {}; 
         return {
             id: word.id,
             english: word.english || "Không rõ",
             vietnamese: word.vietnamese || "Không rõ",
-            level: progressData.level, // Lấy level TỪ PROGRESS
-            phonetic: progressData.phonetic || "" // Lấy phiên âm TỪ PROGRESS
+            level: progressData.level, 
+            phonetic: progressData.phonetic || "" 
         };
     });
     
@@ -879,11 +1044,10 @@ function populateStatsList() {
                 <div>${word.english}${phoneticDisplay}</div> 
                 <div class="card-phonetic" style="color: #555;">${word.vietnamese}</div>
             </div>
-            <span class="stat-level stat-level-${word.level}">Level ${word.level}</span>
+            <span class="stat-level stat-level-${String(word.level)}">Level ${word.level}</span>
         `;
         
         item.addEventListener('click', handleStatItemClick);
-        
         statsListContainer.appendChild(item);
     });
 }

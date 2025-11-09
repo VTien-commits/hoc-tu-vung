@@ -15,7 +15,8 @@
     <div id="mode-selection-overlay" class="mode-overlay">
         <div class="mode-selection-box">
             <h2>Chế độ học từ vựng</h2>
-            <p id="loading-status" class="loading-status">Đang tải dữ liệu...</p>
+            <!-- (ĐÃ XÓA) Đã xóa dòng trạng thái tải -->
+            <!-- <p id="loading-status" class="loading-status">Đang tải dữ liệu...</p> -->
 
             <button id="mode-audio-button" class="mode-select-button" disabled>
                 <span>🔊</span>
@@ -35,7 +36,7 @@
         </div>
     </div>
 
-    <!-- Màn hình 2: Chọn Chủ đề (MỚI) -->
+    <!-- Màn hình 2: Chọn Chủ đề -->
     <div id="topic-selection-overlay" class="mode-overlay" style="display: none;">
         <div class="mode-selection-box">
             <h2>Chọn chủ đề</h2>
@@ -53,8 +54,6 @@
         
         <h1 id="game-title">Đang tải...</h1>
         
-        <!-- (ĐÃ XÓA) Nút LƯU (SYNC) đã bị loại bỏ vì lưu tự động vào cache -->
-        
         <div class="score-container">
             <span>Điểm</span>
             <span id="score">0</span>
@@ -69,39 +68,75 @@
             <div id="left-column" class="column"></div>
             <div id="right-column" class="column"></div>
         </div>
-        <button id="next-round-button" class="action-button" style="display: none;">Màn tiếp theo</button>
+        
+        <!-- (MỚI) Hàng chứa Timer và Nút Next -->
+        <div id="game-footer" class="game-footer">
+            <div id="timer" class="timer">01:00</div>
+            <button id="next-round-button" class="action-button" style="display: none;">Next</button>
+        </div>
     </main>
 
-    <!-- (MỚI) Modal Cài đặt -->
+    <!-- Modal Cài đặt -->
     <div id="settings-modal" class="modal-overlay" style="display: none;">
         <div class="modal-content">
             <h2>Cài đặt</h2>
             <button id="stats-button" class="action-button">Thống kê Từ vựng</button>
             <button id="clear-cache-button" class="action-button secondary-button">Xóa Cache Audio</button>
-            
-            <!-- (MỚI) Thêm nút Xuất Excel -->
             <button id="export-excel-button" class="action-button secondary-button">Xuất dữ liệu (Excel)</button>
             
-            <!-- Tạm thời vô hiệu hóa tính năng upload -->
-            <label for="upload-excel" class="action-button disabled-button" title="Tính năng đang phát triển">
-                Thêm từ (Excel)
-            </label>
-            <input type="file" id="upload-excel" accept=".xlsx, .xls" style="display: none;">
+            <!-- (MỚI) Nút Load Data Online -->
+            <button id="load-online-button" class="action-button secondary-button">Load Data Online</button>
+            <p id="load-online-status" class="loading-status" style="display: none;"></p>
+
+            <!-- (MỚI) Cài đặt Timer -->
+            <label for="timer-setting" class="settings-label">Thời gian đếm ngược (giây):</label>
+            <input type="number" id="timer-setting" class="settings-input" value="60" min="10">
             
-            <button id="settings-close-button" class="action-button modal-close-button">Đóng</button>
+            <!-- Tạm thời vô hiệu hóa tính năng upload -->
+            <!-- <label for="upload-excel" class="action-button disabled-button" title="Tính năng đang phát triển">
+                Thêm từ (Excel)
+            </label> -->
+            <!-- <input type="file" id="upload-excel" accept=".xlsx, .xls" style="display: none;"> -->
+            
+            <!-- (MỚI) Nút Học lại từ đầu -->
+            <button id="reset-progress-button" class="action-button modal-close-button">Học lại từ đầu</button>
+            
+            <button id="settings-close-button" class="action-button secondary-button" style="margin-top: 20px;">Đóng</button>
         </div>
     </div>
 
-    <!-- (MỚI) Modal Thống kê -->
+    <!-- Modal Thống kê -->
     <div id="stats-modal" class="modal-overlay" style="display: none;">
         <div class="modal-content large">
             <h2>Thống kê Từ vựng</h2>
+            
+            <!-- (MỚI) Lọc theo chủ đề -->
+            <label for="stats-topic-filter" class="settings-label" style="margin-top: 0;">Lọc theo chủ đề:</label>
+            <select id="stats-topic-filter" class="settings-input"></select>
+            
             <div id="stats-list" class="stats-list-container">
                 <!-- Thống kê sẽ được JS chèn vào đây -->
             </div>
             <button id="stats-close-button" class="action-button modal-close-button">Đóng</button>
         </div>
     </div>
+
+    <!-- (MỚI) Modal Xác nhận Reset -->
+    <div id="confirm-reset-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <h2>Xác nhận</h2>
+            <p style="font-size: 16px; line-height: 1.5; margin: 10px 0;">
+                Bạn có chắc chắn muốn reset toàn bộ tiến độ về Level 0 không?
+                <br>
+                (Từ vựng sẽ không bị mất).
+            </p>
+            <div class="confirm-buttons">
+                <button id="confirm-reset-cancel" class="action-button secondary-button" style="width: 48%;">Hủy</button>
+                <button id="confirm-reset-confirm" class="action-button modal-close-button" style="width: 48%; margin-top: 0;">Xác nhận</button>
+            </div>
+        </div>
+    </div>
+
 
     <!-- Loader (Chung) -->
     <div id="loader" class="loader-overlay" style="display: none;">

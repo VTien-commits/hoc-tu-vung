@@ -40,14 +40,13 @@ header {
     justify-content: space-between;
     align-items: center;
     border-bottom: 2px solid var(--border-color);
-    flex-wrap: nowrap; /* Ngăn rớt hàng */
+    flex-wrap: nowrap; 
 }
 
-/* (MỚI) Nút trên Header (Home, Settings) */
 .header-button {
     background: none;
     border: none;
-    font-size: 24px; /* To hơn */
+    font-size: 24px; 
     padding: 5px;
     cursor: pointer;
     border-radius: 50%;
@@ -62,27 +61,17 @@ header {
     background-color: var(--bg-color);
 }
 
-/* (MỚI) Div giữ chỗ cho nút cài đặt đã bị di chuyển */
-.header-button-placeholder {
-    width: 40px;
-    height: 40px;
-    padding: 5px;
-}
-
 #game-title {
     font-size: 18px;
     font-weight: 700;
     color: var(--primary-color);
     margin: 0;
-    flex-grow: 1; /* Cho phép co giãn */
+    flex-grow: 1; 
     text-align: center;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
-
-/* (ĐÃ BỎ) Nút Xóa Cache cũ */
-#clear-cache-button { display: none; }
 
 .score-container {
     display: flex;
@@ -94,7 +83,7 @@ header {
     padding: 5px 15px;
     font-weight: 700;
     margin: 0;
-    min-width: 60px; /* Đảm bảo chiều rộng tối thiểu */
+    min-width: 60px; 
     box-sizing: border-box;
 }
 
@@ -110,7 +99,6 @@ header {
     box-sizing: border-box;
 }
 
-/* ... (Giữ nguyên .progress-bar-container, #progress-bar, .game-container, .column, .card, .card-content, .card-word, .card-phonetic, .card.audio-card) ... */
 .progress-bar-container {
     width: 100%;
     background-color: var(--border-color);
@@ -135,7 +123,7 @@ header {
 .column {
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 12px; /* (CẬP NHẬT) Giảm khoảng cách */
 }
 .card {
     background-color: var(--card-bg);
@@ -146,7 +134,7 @@ header {
     box-shadow: var(--shadow);
     transition: all 0.2s ease;
     user-select: none;
-    min-height: 44px;
+    min-height: 64px; /* (CẬP NHẬT) Đặt chiều cao tối thiểu để căn hàng */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -179,8 +167,6 @@ header {
     cursor: not-allowed;
 }
 
-/* (MỚI) Ghi đè lại độ mờ (opacity) khi thẻ bị sai */
-/* Điều này đảm bảo màu hồng/đỏ hiển thị rực rỡ */
 .card.incorrect.disabled {
     opacity: 1;
 }
@@ -192,6 +178,7 @@ header {
     justify-content: center;
     gap: 2px;
     text-align: center;
+    min-height: 40px; /* (MỚI) Giúp ổn định chiều cao thẻ */
 }
 .card-word {
     font-size: 16px;
@@ -210,20 +197,27 @@ header {
 .card.audio-card {
     font-size: 24px;
     color: var(--primary-color);
-    /* (ĐÃ XÓA) Bỏ flex-box cũ */
-    /* display: flex; */
-    /* align-items: center; */
-    /* justify-content: center; */
 }
 
-/* (ĐÃ XÓA) Xóa các class CSS cho ảnh */
-/* .card-with-image { ... } */
-/* .card-text-content { ... } */
-/* .card-image-container { ... } */
-/* .card-image-container img { ... } */
-/* .card-with-image .card-text-content .card-word { ... } */
-/* .card-with-image .card-text-content .card-phonetic { ... } */
+/* (MỚI) Hàng Nút Next và Timer */
+.game-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+}
 
+/* (MỚI) Đồng hồ */
+.timer {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--primary-color);
+    padding: 0 10px;
+}
+.timer.warning {
+    color: var(--incorrect-color);
+    animation: shake 0.8s infinite;
+}
 
 /* --- Nút bấm (Chung) --- */
 .action-button {
@@ -239,13 +233,28 @@ header {
     margin-top: 20px;
     box-shadow: 0 4px 10px rgba(74, 144, 226, 0.3);
     transition: background-color 0.2s;
-    box-sizing: border-box; /* (MỚI) */
+    box-sizing: border-box; 
 }
 .action-button:hover {
     background-color: #3a7ac8;
 }
 
-/* (MỚI) Nút phụ (Màu xám) */
+/* (CẬP NHẬT) Nút Next */
+#next-round-button {
+    width: auto; /* Tự động co giãn */
+    padding: 15px 30px;
+    margin-top: 0; /* Đã nằm trong .game-footer */
+}
+
+/* (MỚI) Nút bị vô hiệu hóa (cho nút Next) */
+.action-button:disabled {
+    background-color: #999;
+    color: #eee;
+    cursor: not-allowed;
+    box-shadow: none;
+    opacity: 0.7;
+}
+
 .action-button.secondary-button {
     background-color: #6c757d;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
@@ -254,7 +263,6 @@ header {
     background-color: #5a6268;
 }
 
-/* (MỚI) Nút bị vô hiệu hóa */
 .action-button.disabled-button {
     background-color: var(--border-color);
     color: #999;
@@ -345,13 +353,15 @@ header {
     color: var(--primary-color);
     font-size: 22px;
 }
-#loading-status {
-    font-size: 16px;
+/* (MỚI) Trạng thái loading (dùng trong Cài đặt) */
+.loading-status {
+    font-size: 14px;
     font-weight: 600;
     color: var(--text-color);
-    margin: -10px 0 0 0;
+    margin: 5px 0 0 0;
     transition: color 0.3s;
 }
+
 .mode-select-button {
     background-color: var(--card-bg);
     border: 2px solid var(--border-color);
@@ -399,32 +409,28 @@ header {
     color: var(--primary-color);
 }
 
-/* (MỚI) Danh sách chủ đề */
 .topic-list-container {
     display: flex;
     flex-direction: column;
     gap: 15px;
-    max-height: 60vh;   /* <-- Giữ lại cuộn */
-    overflow-y: auto;    /* <-- Giữ lại cuộn */
+    max-height: 60vh;   
+    overflow-y: auto;    
     width: 100%; 
 }
 
-/* (MỚI) Căn lề trái cho các nút chủ đề */
 .topic-list-container .action-button {
     text-align: left;
-    padding-left: 25px; /* Thêm chút đệm đầu dòng */
+    padding-left: 25px; 
 }
 
-/* Nút chủ đề dùng lại .action-button */
-
-/* --- (MỚI) Modal (Cài đặt, Thống kê) --- */
+/* --- Modal (Cài đặt, Thống kê) --- */
 .modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.5); /* Nền mờ */
+    background-color: rgba(0, 0, 0, 0.5); 
     display: flex;
     justify-content: center;
     align-items: center;
@@ -442,36 +448,68 @@ header {
     max-width: 400px;
     display: flex;
     flex-direction: column;
-    gap: 15px; /* Giảm gap */
+    gap: 10px; /* (CẬP NHẬT) Giảm gap */
     text-align: center;
 }
 .modal-content.large {
-    max-width: 600px; /* Rộng hơn cho Thống kê */
+    max-width: 600px; 
 }
 .modal-content h2 {
     margin: 0 0 10px 0;
     color: var(--primary-color);
     font-size: 22px;
 }
-/* Nút trong Modal (Cài đặt) */
+
 .modal-content .action-button {
-    margin-top: 5px; /* Giảm margin */
+    margin-top: 5px; 
 }
 .modal-close-button {
-    margin-top: 15px;
-    background-color: var(--incorrect-color); /* Nút Đóng màu đỏ */
+    /* margin-top: 15px; */ /* (Đã bỏ) */
+    background-color: var(--incorrect-color); 
 }
 .modal-close-button:hover {
     background-color: #c0392b;
 }
 
-/* (MỚI) Khung Thống kê */
+/* (MỚI) Input và Label trong Cài đặt */
+.settings-label {
+    display: block;
+    text-align: left;
+    font-weight: 600;
+    margin-top: 10px;
+    font-size: 14px;
+    color: #333;
+}
+.settings-input {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    font-size: 16px;
+    box-sizing: border-box;
+    margin-top: 5px;
+}
+
+/* (MỚI) Hàng nút xác nhận */
+.confirm-buttons {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 20px;
+}
+.confirm-buttons .action-button {
+    margin-top: 0;
+}
+
+
+/* Khung Thống kê */
 .stats-list-container {
-    max-height: 60vh;
+    max-height: 50vh; /* (CẬP NHẬT) Giảm chiều cao */
     overflow-y: auto;
     text-align: left;
     border: 1px solid var(--border-color);
     border-radius: 8px;
+    margin-top: 10px;
 }
 .stat-item {
     display: flex;
@@ -479,11 +517,10 @@ header {
     align-items: center;
     padding: 12px 15px;
     border-bottom: 1px solid var(--border-color);
-    cursor: pointer; /* (MỚI) Thêm con trỏ */
-    transition: background-color 0.2s; /* (MỚI) Thêm hiệu ứng hover */
+    cursor: pointer; 
+    transition: background-color 0.2s; 
 }
 
-/* (MỚI) Thêm hiệu ứng hover cho mục thống kê */
 .stat-item:hover {
     background-color: var(--primary-light);
 }
@@ -494,13 +531,11 @@ header {
 .stat-word {
     font-weight: 600;
     font-size: 16px;
-    /* (MỚI) Cho phép hiển thị phiên âm cùng dòng */
     display: flex;
-    flex-direction: column; /* Xếp (Từ + Phiên âm) trên (Nghĩa) */
+    flex-direction: column; 
     align-items: flex-start;
 }
 
-/* (MỚI) Căn chỉnh cho phiên âm trong Thống kê */
 .stat-word .card-phonetic {
     font-size: 14px;
     font-weight: 400;
@@ -508,9 +543,8 @@ header {
     font-style: italic;
 }
 
-/* (MỚI) Căn chỉnh cho phiên âm trong Thẻ Nghe (Audio Card) */
 .audio-card .card-word {
-    font-size: 24px; /* Giữ kích thước cho icon loa */
+    font-size: 24px; 
     line-height: 1.2;
 }
 
@@ -521,8 +555,8 @@ header {
     border-radius: 6px;
     color: white;
 }
-/* Màu theo Level */
-.stat-level-0 { background-color: #777; }
+/* Màu theo Level (Sửa lỗi undefined) */
+.stat-level-0, .stat-level-undefined, .stat-level-null { background-color: #777; }
 .stat-level-1 { background-color: var(--warning-color); }
 .stat-level-2 { background-color: var(--primary-color); }
 .stat-level-3 { background-color: var(--primary-color); }
