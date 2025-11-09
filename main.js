@@ -110,6 +110,9 @@ async function initializeApp() {
 
     // 4. Lấy dữ liệu từ vựng (từ Google Sheet) và "trí nhớ" (từ LocalStorage)
     await loadData();
+
+    // 5. (MỚI) Tự động đồng bộ mỗi 5 phút (sau khi load data thành công)
+    setInterval(syncProgressToSheet, 300000); // 300000 ms = 5 phút
 }
 
 // (MỚI) Gán tất cả sự kiện
@@ -202,6 +205,8 @@ async function loadData() {
         console.error("Lỗi khi khởi động:", error);
         loadingStatus.textContent = `Lỗi: ${error.message}. Vui lòng tải lại.`;
         loadingStatus.style.color = "var(--incorrect-color)"; // Màu đỏ
+        // (MỚI) Hiển thị lỗi rõ hơn (alert cho user)
+        alert(`Lỗi tải dữ liệu: ${error.message}. Hãy kiểm tra kết nối hoặc URL backend.`);
     }
 }
 
@@ -277,7 +282,8 @@ async function syncProgressToSheet() {
             body: JSON.stringify(progress), // Gửi toàn bộ "trí nhớ"
             headers: {
                 'Content-Type': 'application/json'
-            }
+            },
+            mode: 'cors'  // (MỚI) Thêm để explicit CORS
         });
 
         // (MỚI) Xử lý nếu mạng bị lỗi (ví dụ: 404, 500)
@@ -302,7 +308,7 @@ async function syncProgressToSheet() {
         }
         
     } catch (error) {
-        console.error("Lỗi khi đồng bộ:", error);
+        console.error("Chi tiết lỗi:", error);  // (MỚI) Log chi tiết vào console
         // (CẬP NHẬT) Hiển thị lỗi rõ ràng
         showLoader(true, `Lỗi đồng bộ: ${error.message}`);
 
@@ -431,13 +437,11 @@ function startNewRound() {
     selectedRight = null;
     correctPairs = 0;
 
-    // 1. Lấy từ theo logic SRS (đã lọc theo chủ đề)
-    currentWords = getWordsToReview(WORDS_PER_ROUND); 
-    
-    if (currentWords.length === 0) {
-        gameTitle.textContent = "Không có từ vựng!";
-        if (selectedTopic !== "Tất cả" && allWords.length > 0) {
-            gameTitle.textContent = `Không có từ trong chủ đề "${selectedTopic}"`;
+    // 1. Lấy từ để chơi
+    currentWords = getWordsToReview();
+    if (currentWords.length < WORDS_PER_ROUND) {
+        if (currentWords.length === 0) {
+            gameTitle.textContent = "Không có từ nào trong chủ đề này!";
         } else if (allWords.length === 0) {
             gameTitle.textContent = "Lỗi tải dữ liệu";
         } else {
