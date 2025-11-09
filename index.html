@@ -8,6 +8,8 @@
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="images/icon-192.png">
     <title>Học từ vựng</title>
+    <!-- (MỚI) Thêm thư viện SheetJS (xlsx) để xuất Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -15,7 +17,7 @@
     <div id="mode-selection-overlay" class="mode-overlay">
         <div class="mode-selection-box">
             <h2>Chế độ học từ vựng</h2>
-            <!-- (ĐÃ XÓA) Đã xóa dòng trạng thái tải -->
+            <!-- (ĐÃ XÓA) Xóa trạng thái tải -->
             <!-- <p id="loading-status" class="loading-status">Đang tải dữ liệu...</p> -->
 
             <button id="mode-audio-button" class="mode-select-button" disabled>
@@ -29,9 +31,7 @@
                 <p>Đọc từ tiếng Anh (kèm phiên âm) và nối với nghĩa.</p>
             </button>
 
-            <!-- Nút Cài đặt -->
             <button id="settings-button" class="action-button secondary-button">Cài đặt ⚙️</button>
-            <!-- Nút Tải lại -->
             <button id="reload-button" class="action-button secondary-button">Tải lại Ứng dụng</button>
         </div>
     </div>
@@ -49,11 +49,11 @@
 
     <!-- Màn hình 3: Giao diện game chính -->
     <header style="display: none;">
-        <!-- Nút Home (Thoát) -->
         <button id="home-button" class="header-button" title="Về trang chủ">🏠</button>
-        
         <h1 id="game-title">Đang tải...</h1>
-        
+        <!-- (ĐÃ XÓA) Nút lưu đã bị xóa -->
+        <div class="header-button-placeholder"></div>
+
         <div class="score-container">
             <span>Điểm</span>
             <span id="score">0</span>
@@ -68,52 +68,49 @@
             <div id="left-column" class="column"></div>
             <div id="right-column" class="column"></div>
         </div>
-        
-        <!-- (MỚI) Hàng chứa Timer và Nút Next -->
-        <div id="game-footer" class="game-footer">
-            <div id="timer" class="timer">01:00</div>
+
+        <!-- (MỚI) Hàng chứa Nút Next và Timer -->
+        <div class="game-controls">
             <button id="next-round-button" class="action-button" style="display: none;">Next</button>
+            <div id="timer" class="timer-display">01:00</div>
         </div>
     </main>
 
-    <!-- Modal Cài đặt -->
+    <!-- (CẬP NHẬT) Modal Cài đặt (Sắp xếp lại) -->
     <div id="settings-modal" class="modal-overlay" style="display: none;">
         <div class="modal-content">
             <h2>Cài đặt</h2>
-            
-            <!-- (CẬP NHẬT) Sắp xếp lại thứ tự -->
+
             <button id="stats-button" class="action-button">Thống kê Từ vựng</button>
             
             <label for="timer-setting" class="settings-label">Thời gian đếm ngược (giây):</label>
-            <input type="number" id="timer-setting" class="settings-input" value="60" min="10">
+            <!-- (CẬP NHẬT) Đổi type="number" thành type="tel" để có bàn phím số đơn giản -->
+            <input type="tel" id="timer-setting" class="settings-input" value="60">
 
-            <button id="export-excel-button" class="action-button secondary-button">Xuất dữ liệu (Excel)</button>
+            <button id="export-excel-button" class="action-button">Xuất dữ liệu (Excel)</button>
             
-            <button id="load-online-button" class="action-button secondary-button">Load Data Online</button>
-            <p id="load-online-status" class="loading-status" style="display: none;"></p>
-            
+            <button id="load-online-button" class="action-button">Load Data Online</button>
+            <p id="load-online-status" class="modal-status" style="display: none;"></p>
+
             <button id="clear-cache-button" class="action-button secondary-button">Xóa Cache Audio</button>
-            
             <button id="reset-progress-button" class="action-button modal-close-button">Học lại từ đầu</button>
-            
-            <button id="settings-close-button" class="action-button secondary-button" style="margin-top: 20px;">Đóng</button>
+            <button id="settings-close-button" class="action-button secondary-button">Đóng</button>
         </div>
     </div>
 
-    <!-- Modal Thống kê -->
+    <!-- (CẬP NHẬT) Modal Thống kê (Thêm filter) -->
     <div id="stats-modal" class="modal-overlay" style="display: none;">
         <div class="modal-content large">
             <h2>Thống kê Từ vựng</h2>
-            
-            <!-- (MỚI) Hàng Lọc và Đếm -->
+
+            <!-- (MỚI) Hàng Filter và Tổng số -->
             <div class="stats-header">
-                <div class="stats-filter-group">
-                    <label for="stats-topic-filter" class="settings-label" style="margin-top: 0;">Lọc theo chủ đề:</label>
-                    <select id="stats-topic-filter" class="settings-input"></select>
-                </div>
-                <span id="stats-total-count" class="stats-total-count">Tổng số từ: 0</span>
+                <select id="stats-topic-filter" class="settings-input">
+                    <!-- JS sẽ chèn các chủ đề vào đây -->
+                </select>
+                <span id="stats-total-count">Tổng số từ: 0</span>
             </div>
-            
+
             <div id="stats-list" class="stats-list-container">
                 <!-- Thống kê sẽ được JS chèn vào đây -->
             </div>
@@ -121,38 +118,25 @@
         </div>
     </div>
 
-    <!-- (MỚI) Modal Xác nhận Reset -->
+    <!-- (MỚI) Modal Xác nhận Học lại từ đầu -->
     <div id="confirm-reset-modal" class="modal-overlay" style="display: none;">
         <div class="modal-content">
             <h2>Xác nhận</h2>
-            <p style="font-size: 16px; line-height: 1.5; margin: 10px 0;">
-                Bạn có chắc chắn muốn reset toàn bộ tiến độ về Level 0 không?
-                <br>
-                (Từ vựng sẽ không bị mất).
-            </p>
-            <div class="confirm-buttons">
-                <button id="confirm-reset-cancel" class="action-button secondary-button" style="width: 48%;">Hủy</button>
-                <button id="confirm-reset-confirm" class="action-button modal-close-button" style="width: 48%; margin-top: 0;">Xác nhận</button>
-            </div>
+            <p>Bạn có chắc chắn muốn xóa toàn bộ tiến độ và học lại từ đầu không?</p>
+            <button id="confirm-reset-confirm" class="action-button modal-close-button">Xác nhận Xóa</button>
+            <button id="confirm-reset-cancel" class="action-button secondary-button">Hủy</button>
         </div>
     </div>
 
-    <!-- (MỚI) Modal Xác nhận Xóa Cache -->
+    <!-- (MỚI) Modal Xác nhận Xóa Cache Audio -->
     <div id="confirm-cache-modal" class="modal-overlay" style="display: none;">
         <div class="modal-content">
             <h2>Xác nhận</h2>
-            <p style="font-size: 16px; line-height: 1.5; margin: 10px 0;">
-                Bạn có chắc chắn muốn xóa toàn bộ file âm thanh (Audio) đã tải không?
-                <br>
-                (Lần chơi sau sẽ phải tải lại audio).
-            </p>
-            <div class="confirm-buttons">
-                <button id="confirm-cache-cancel" class="action-button secondary-button" style="width: 48%;">Hủy</button>
-                <button id="confirm-cache-confirm" class="action-button modal-close-button" style="width: 48%; margin-top: 0;">Xác nhận</button>
-            </div>
+            <p>Bạn có chắc chắn muốn xóa cache audio không? (Các file âm thanh sẽ phải tải lại)</p>
+            <button id="confirm-cache-confirm" class="action-button modal-close-button">Xác nhận Xóa</button>
+            <button id="confirm-cache-cancel" class="action-button secondary-button">Hủy</button>
         </div>
     </div>
-
 
     <!-- Loader (Chung) -->
     <div id="loader" class="loader-overlay" style="display: none;">
@@ -162,7 +146,5 @@
         </div>
     </div>
 </body>
-<!-- (MỚI) Thêm thư viện SheetJS để xuất Excel -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="main.js"></script>
 </html>
