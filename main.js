@@ -5,7 +5,7 @@
 
 // --- Cài đặt Chung ---
 // (GIỮ NGUYÊN) Vẫn cần URL để TẢI dữ liệu
-const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxshuYRDZZUNwoOOG1_ME3tFO6RljsmvImNRFv35WgDkODRLqx-jaz0EaEXTGR6Wwiq/exec'; 
+const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyOeRAjUsPpgizXQOpuFnuElYQ7ZWwxUZJilRnymmcuCafZ965a1fPiEzVx5l_tP6c/exec'; 
 
 // (ĐÃ XÓA) Không cần khóa lưu allWords, vì nó được tải mỗi lần
 // const ALL_WORDS_STORAGE_KEY = 'vocabAppAllWords';
