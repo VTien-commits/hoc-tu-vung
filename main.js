@@ -5,7 +5,7 @@
 
 // --- Cài đặt Chung ---
 // !!! QUAN TRỌNG: Dán URL Ứng dụng web Google Apps Script của bạn vào đây
-const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwj8Ui9jUMOxVXkI6gMZlf84EeLQeYPWMSRbAoitOTH9qSTsx4SgGwXN7uTCTGAdO6T/exec'; 
+const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwim3tLgXKyPrLuowpheZpR_FrEpNzfRZM0YEqjEcp-Cm2O7O4eMQri4EchJpK-P_EC/exec'; 
 
 // (ĐÃ XÓA) Đường dẫn tới thư mục ảnh
 // const IMAGE_BASE_PATH = 'images/';
