@@ -221,8 +221,32 @@ function selectGameMode(mode) {
     modeSelectionOverlay.style.display = 'none';
     
     // Hiển thị màn 2 (Chọn chủ đề)
-    populateTopicList(); // Tạo danh sách chủ đề
+    populateTopicList(); // (SỬA) Hàm này đã bị thiếu, giờ đã thêm lại
     topicSelectionOverlay.style.display = 'flex';
+}
+
+// (MỚI) TẠO DANH SÁCH CHỦ ĐỀ (HÀM ĐÃ BỊ MẤT)
+function populateTopicList() {
+    topicListContainer.innerHTML = ''; // Xóa danh sách cũ
+    
+    // 1. Lấy tất cả chủ đề
+    const topics = new Set(allWords.map(word => word.topic || "Khác"));
+    
+    // 2. Tạo nút "Tất cả"
+    const allButton = document.createElement('button');
+    allButton.className = 'action-button';
+    allButton.textContent = 'Tất cả';
+    allButton.addEventListener('click', () => selectTopic('Tất cả'));
+    topicListContainer.appendChild(allButton);
+    
+    // 3. Tạo nút cho mỗi chủ đề
+    topics.forEach(topic => {
+        const topicButton = document.createElement('button');
+        topicButton.className = 'action-button';
+        topicButton.textContent = topic;
+        topicButton.addEventListener('click', () => selectTopic(topic));
+        topicListContainer.appendChild(topicButton);
+    });
 }
 
 // (MỚI) Chọn chủ đề (Màn 2 -> Màn 3)
