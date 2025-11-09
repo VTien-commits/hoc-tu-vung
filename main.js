@@ -4,7 +4,7 @@
 // ***********************************************
 
 // --- Cài đặt Chung ---
-const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwim3tLgXKyPrLuowpheZpR_FrEpNzfRZM0YEqjEcp-Cm2O7O4eMQri4EchJpK-P_EC/exec'; 
+const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyOeRAjUsPpgizXQOpuFnuElYQ7ZWwxUZJilRnymmcuCafZ965a1fPiEzVx5l_tP6c/exec'; 
 
 // (MỚI) Thêm cache cho từ vựng
 const ALL_WORDS_CACHE_KEY = 'vocabAppAllWordsCache';
