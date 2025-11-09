@@ -245,7 +245,10 @@ async function loadDataOnline(isManual = false) {
              throw new Error('URL Apps Script chưa được cài đặt.');
         }
         
-        const response = await fetch(GOOGLE_APPS_SCRIPT_URL);
+        // (CẬP NHẬT) Thêm cache-busting (?t=...) để buộc điện thoại tải lại
+        const cacheBustURL = `${GOOGLE_APPS_SCRIPT_URL}?t=${new Date().getTime()}`;
+        const response = await fetch(cacheBustURL);
+        
         if (!response.ok) throw new Error('Không thể tải dữ liệu từ Google Sheet');
         const result = await response.json();
         
