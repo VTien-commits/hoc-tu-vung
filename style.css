@@ -215,47 +215,13 @@ header {
     justify-content: center;
 }
 
-/* (MỚI) Cấu trúc thẻ "Đọc & Nối" (Chữ + Ảnh) */
-.card-with-image {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between; /* Đẩy chữ và ảnh ra 2 bên */
-    width: 100%;
-    gap: 10px;
-}
-
-.card-text-content {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start; /* Căn chữ bên trái */
-    flex-grow: 1; /* Cho phép phần chữ co giãn */
-    /* Giữ lại căn giữa từ .card-content cũ */
-    text-align: left;
-}
-
-.card-image-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0; /* Ngăn ảnh bị co lại */
-}
-
-.card-image-container img {
-    max-height: 50px; /* Giới hạn chiều cao ảnh (như kế hoạch) */
-    max-width: 60px; /* Giới hạn chiều rộng (tránh ảnh quá dài) */
-    height: auto;
-    width: auto;
-    object-fit: contain; /* Đảm bảo ảnh không bị méo */
-}
-
-/* Ghi đè lại .card-content cũ cho phần chữ */
-.card-with-image .card-text-content .card-word {
-    text-align: left;
-}
-.card-with-image .card-text-content .card-phonetic {
-    text-align: left;
-}
+/* (ĐÃ XÓA) Xóa các class CSS cho ảnh */
+/* .card-with-image { ... } */
+/* .card-text-content { ... } */
+/* .card-image-container { ... } */
+/* .card-image-container img { ... } */
+/* .card-with-image .card-text-content .card-word { ... } */
+/* .card-with-image .card-text-content .card-phonetic { ... } */
 
 
 /* --- Nút bấm (Chung) --- */
@@ -437,9 +403,9 @@ header {
     display: flex;
     flex-direction: column;
     gap: 15px;
-    max-height: 60vh;   /* <-- (CẬP NHẬT) Bỏ comment để bật lại cuộn */
-    overflow-y: auto;    /* <-- (CẬP NHẬT) Bỏ comment để bật lại cuộn */
-    width: 100%; /* (MỚI) Đảm bảo chiếm đủ chiều rộng */
+    max-height: 60vh;   /* <-- Giữ lại cuộn */
+    overflow-y: auto;    /* <-- Giữ lại cuộn */
+    width: 100%; 
 }
 
 /* (MỚI) Căn lề trái cho các nút chủ đề */

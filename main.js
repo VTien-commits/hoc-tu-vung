@@ -7,9 +7,8 @@
 // !!! QUAN TRỌNG: Dán URL Ứng dụng web Google Apps Script của bạn vào đây
 const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxshuYRDZZUNwoOOG1_ME3tFO6RljsmvImNRFv35WgDkODRLqx-jaz0EaEXTGR6Wwiq/exec'; 
 
-// (MỚI) Đường dẫn tới thư mục ảnh trên GitHub
-// (Nó sẽ tự động tìm trong thư mục 'images' cùng cấp với index.html)
-const IMAGE_BASE_PATH = 'images/';
+// (ĐÃ XÓA) Đường dẫn tới thư mục ảnh
+// const IMAGE_BASE_PATH = 'images/';
 
 const PROGRESS_STORAGE_KEY = 'vocabAppProgress'; // Khóa lưu "trí nhớ" cục bộ
 const AUDIO_CACHE_NAME = 'audio-cache-v1';
@@ -464,7 +463,7 @@ function startNewRound() {
     updateProgress();
 }
 
-// Tạo thẻ (Giữ nguyên)
+// (CẬP NHẬT) Tạo thẻ (Đã bỏ logic ảnh)
 function createCard(item, side) {
     const card = document.createElement('div');
     card.className = 'card';
@@ -477,52 +476,28 @@ function createCard(item, side) {
         card.classList.add('audio-card');
         card.textContent = '🔊';
     } else if (item.type === 'phonetic-text' && side === 'left') {
-        // (CẬP NHẬT) CHẾ ĐỘ TEXT (Bên trái) - Hiển thị [Chữ + Phiên âm | Ảnh]
+        // CHẾ ĐỘ TEXT (Bên trái) - Hiển thị Word + Phonetic (TRỞ VỀ NHƯ CŨ)
         card.classList.add('text-audio-card');
         const wordPhonetic = progress[item.id]?.phonetic;
         
-        // 1. Tạo cấu trúc (wrapper)
-        const wrapperDiv = document.createElement('div');
-        wrapperDiv.className = 'card-with-image'; // Class mới cho Flexbox
-
-        // 2. Tạo phần chữ (Word + Phonetic)
-        const textContentDiv = document.createElement('div');
-        textContentDiv.className = 'card-text-content'; // Class mới
-
+        const cardContent = document.createElement('div');
+        cardContent.className = 'card-content';
+        
         const wordEl = document.createElement('div');
         wordEl.className = 'card-word';
         wordEl.textContent = item.text;
-        textContentDiv.appendChild(wordEl);
+        cardContent.appendChild(wordEl);
 
         if (wordPhonetic) {
             const phoneticEl = document.createElement('div');
             phoneticEl.className = 'card-phonetic';
             phoneticEl.textContent = wordPhonetic;
-            textContentDiv.appendChild(phoneticEl);
+            cardContent.appendChild(phoneticEl);
         }
-        
-        // 3. Tạo phần ảnh
-        const imageContainerDiv = document.createElement('div');
-        imageContainerDiv.className = 'card-image-container'; // Class mới
-        
-        const imgEl = document.createElement('img');
-        imgEl.src = formatWordForImageName(item.word); // Tự động tạo link ảnh
-        
-        // Tự động ẩn nếu không tìm thấy ảnh
-        imgEl.onerror = function() { 
-            this.style.display = 'none'; 
-            // Nếu ảnh lỗi, căn giữa lại phần chữ
-            wrapperDiv.style.justifyContent = 'center'; 
-        };
-        
-        imageContainerDiv.appendChild(imgEl);
-
-        // 4. Gắn vào thẻ
-        wrapperDiv.appendChild(textContentDiv);
-        wrapperDiv.appendChild(imageContainerDiv);
-        card.appendChild(wrapperDiv);
+        card.appendChild(cardContent);
 
     } else {
+        // CHẾ ĐỘ TEXT (Bên phải - Tiếng Việt)
         const cardContent = document.createElement('div');
         cardContent.className = 'card-content';
         const wordEl = document.createElement('div');
@@ -575,21 +550,311 @@ function handleCardClick(event) {
     }
 }
 
-// (MỚI) Hàm định dạng tên ảnh
-// Ví dụ: "living room" -> "images/living_room.png"
-// "go-went-gone" -> "images/go_went_gone.png"
-function formatWordForImageName(word) {
-    if (!word) return "";
-    // Thay thế dấu cách, dấu gạch ngang bằng gạch dưới
-    const imageName = word.toLowerCase().replace(/[\s-]+/g, '_'); 
-    return `${IMAGE_BASE_PATH}${imageName}.png`;
+// Kiểm tra (Giữ nguyên)
+function checkMatch() {
+    const isMatch = selectedLeft.dataset.id === selectedRight.dataset.id;
+    const wordId = selectedLeft.dataset.id;
+
+    selectedLeft.classList.add('disabled');
+    selectedRight.classList.add('disabled');
+
+    if (isMatch) {
+        selectedLeft.classList.add('correct');
+        selectedRight.classList.add('correct');
+        correctPairs++;
+        totalScore += 10;
+        updateWordProgress(wordId, true); // Lưu vào localStorage
+
+        if (correctPairs === currentWords.length) {
+            gameContainer.style.opacity = 0.5;
+            nextRoundButton.style.display = 'block';
+        }
+        
+        // Reset ngay khi đúng
+        selectedLeft = null;
+        selectedRight = null;
+    } else {
+        isChecking = true; // (MỚI) Khóa các lượt click khác
+        
+        selectedLeft.classList.add('incorrect');
+        selectedRight.classList.add('incorrect');
+        totalScore = Math.max(0, totalScore - 5);
+        updateWordProgress(wordId, false); // Lưu vào localStorage
+
+        setTimeout(() => {
+            selectedLeft.classList.remove('incorrect', 'selected', 'disabled');
+            selectedRight.classList.remove('incorrect', 'selected', 'disabled');
+            selectedLeft = null;
+            selectedRight = null;
+            isChecking = false; // (MỚI) Mở khóa sau 1 giây
+        }, 1000); // <-- Thời gian 1 giây
+    }
 }
 
-// Hàm xáo trộn mảng
+// Cập nhật thanh tiến trình (Giữ nguyên)
+function updateProgress() {
+    const progressPercent = (correctPairs / currentWords.length) * 100;
+    progressBar.style.width = `${progressPercent}%`;
+    scoreDisplay.textContent = totalScore;
+}
+
+// --- Các hàm hỗ trợ (Đã cập nhật) ---
+
+// Xóa cache âm thanh (Giữ nguyên)
+async function clearAudioCache() {
+    console.log('Đang xóa cache âm thanh theo yêu cầu...');
+    showLoader(true, "Đang xóa cache âm thanh...");
+    try {
+        await caches.delete(AUDIO_CACHE_NAME);
+        console.log('Đã xóa cache âm thanh thành công.');
+        await caches.open(AUDIO_CACHE_NAME); 
+        
+        showLoader(true, "Đã xóa xong!");
+        setTimeout(() => { showLoader(false); }, 1500); 
+    } catch (err) {
+        console.error('Lỗi khi xóa cache âm thanh:', err);
+        showLoader(true, "Xóa cache thất bại!");
+        setTimeout(() => { showLoader(false); }, 2000);
+    }
+}
+
+// Chuẩn hóa từ (Giữ nguyên)
+function normalizeWord(word) {
+    if (!word) return "";
+    return word.trim().toLowerCase();
+}
+
+// Tải trước (Giữ nguyên)
+function preloadDataForRound(words) {
+    console.log(`Đang tải trước dữ liệu cho ${words.length} từ...`);
+    words.forEach(word => {
+        if (!word.english) return;
+        fetchAndCacheWordData(word.english, word.id, null, false); 
+    });
+}
+
+// Phát âm thanh (Giữ nguyên)
+async function playAudio(word) {
+    if (!word) return;
+    
+    const audioButton = document.querySelector(`.card[data-word="${word}"][data-side="left"]`);
+    if (audioButton) audioButton.classList.add('selected'); 
+
+    const wordData = allWords.find(w => w.english === word);
+    if (!wordData) {
+        console.error(`Không tìm thấy wordData cho: ${word}`);
+        return;
+    }
+
+    fetchAndCacheWordData(word, wordData.id, audioButton, true);
+}
+
+// (CẬP NHẬT) Lấy ÂM THANH và PHIÊN ÂM (Đã sửa logic ĐTBQT)
+async function fetchAndCacheWordData(word, wordId, audioButtonElement, shouldPlay) {
+    let normalizedWord = normalizeWord(word);
+    if (!normalizedWord) return;
+
+    // (MỚI) Xử lý Động từ Bất quy tắc (chỉ lấy từ đầu tiên)
+    // Ví dụ: "go-went-gone" -> "go"
+    // "eat ate eaten" -> "eat"
+    if (normalizedWord.includes('-') || normalizedWord.split(' ').length > 2) {
+        normalizedWord = normalizedWord.split(/[\s-]+/)[0];
+    }
+    // (Kết thúc)
+
+    // 1. Kiểm tra xem đã có đủ dữ liệu chưa
+    const cache = await caches.open(AUDIO_CACHE_NAME);
+    const hasPhonetic = progress[wordId]?.phonetic;
+    
+    try {
+        const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${normalizedWord}`);
+        if (!response.ok) throw new Error('Không tìm thấy từ (404)');
+        
+        const data = await response.json();
+        
+        let audioUrl = "";
+        let phoneticText = hasPhonetic ? progress[wordId].phonetic : null;
+
+        if (data[0] && data[0].phonetics) {
+            let phoneticData = data[0].phonetics.find(p => p.audio && p.audio !== "" && p.text);
+            if (!phoneticData) {
+                phoneticData = data[0].phonetics.find(p => p.audio && p.audio !== "");
+            }
+            if (!phoneticData && !hasPhonetic) {
+                const textOnlyPhonetic = data[0].phonetics.find(p => p.text);
+                if(textOnlyPhonetic) phoneticText = textOnlyPhonetic.text;
+            }
+
+            if (phoneticData) {
+                if (!phoneticText && phoneticData.text) {
+                    phoneticText = phoneticData.text;
+                }
+                if(phoneticData.audio) {
+                    audioUrl = phoneticData.audio;
+                    if (audioUrl.startsWith("//")) {
+                        audioUrl = "https:" + audioUrl;
+                    }
+                }
+            }
+        }
+        
+        if (phoneticText && !hasPhonetic) {
+            progress[wordId].phonetic = phoneticText;
+            saveProgress();
+            
+            // Cập nhật giao diện nếu thẻ đã được vẽ (cho preload)
+            const cardEl = document.querySelector(`.card[data-id="${wordId}"] .card-content`);
+            if (cardEl && !cardEl.querySelector('.card-phonetic')) {
+                const phoneticEl = document.createElement('div');
+                phoneticEl.className = 'card-phonetic';
+                phoneticEl.textContent = phoneticText;
+                cardEl.appendChild(phoneticEl);
+            }
+        }
+
+
+        if (audioUrl) {
+            let cachedResponse = await cache.match(audioUrl);
+            let audioBlob;
+
+            if (cachedResponse) {
+                if (shouldPlay) console.log(`[Cache] Đã tìm thấy ${normalizedWord}.`);
+                audioBlob = await cachedResponse.blob();
+            } else {
+                console.log(`[Network] Đang tải ${normalizedWord}, sẽ lưu vào cache...`);
+                const networkResponse = await fetch(audioUrl);
+                if (!networkResponse.ok) throw new Error('Không thể tải file MP3');
+                await cache.put(audioUrl, networkResponse.clone());
+                audioBlob = await networkResponse.blob();
+            }
+
+            if (shouldPlay) {
+                const objectUrl = URL.createObjectURL(audioBlob);
+                playAudioFromUrl(objectUrl, audioButtonElement);
+            }
+
+        } else {
+            if (shouldPlay) {
+                console.warn(`Không tìm thấy audio URL cho từ: ${normalizedWord}`);
+                if (audioButtonElement) {
+                    const originalHTML = audioButtonElement.innerHTML;
+                    audioButtonElement.innerHTML = "Không có audio";
+                    audioButtonElement.classList.remove('selected');
+                    setTimeout(() => {
+                        audioButtonElement.innerHTML = originalHTML;
+                    }, 1500);
+                }
+            }
+        }
+
+    } catch (error) {
+        console.error(`Lỗi khi xử lý dữ liệu cho ${word}:`, error);
+        if (shouldPlay && audioButtonElement && audioButtonElement !== selectedLeft) {
+            audioButtonElement.classList.remove('selected');
+        }
+    }
+}
+
+
+// Phát audio (Giữ nguyên)
+function playAudioFromUrl(url, audioButton) {
+    const audio = new Audio(url);
+    
+    audio.onended = () => {
+        if (audioButton && audioButton !== selectedLeft) {
+            audioButton.classList.remove('selected');
+        }
+        URL.revokeObjectURL(url);
+    };
+    
+    audio.onerror = () => {
+        console.error("Lỗi khi phát file audio.");
+        if (audioButton && audioButton !== selectedLeft) {
+            audioButton.classList.remove('selected');
+        }
+        URL.revokeObjectURL(url);
+    };
+
+    audio.play();
+}
+
+// Hiển thị Loader (Giữ nguyên)
+function showLoader(show, message = "Đang tải...") {
+    if (!loader) return;
+    loaderText.textContent = message;
+    loader.style.display = show ? 'flex' : 'none';
+}
+
+// Xáo trộn mảng (Giữ nguyên)
 function shuffleArray(array) {
     for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [array[i], array[j]] = [array[j], array[i]];
     }
     return array;
+}
+
+// (MỚI) Mở Modal Cài đặt
+function openSettingsModal() {
+    settingsModal.style.display = 'flex';
+}
+function closeSettingsModal() {
+    settingsModal.style.display = 'none';
+}
+
+// (MỚI) Mở Modal Thống kê
+function openStatsModal() {
+    populateStatsList(); // Tạo danh sách
+    statsModal.style.display = 'flex';
+}
+function closeStatsModal() {
+    statsModal.style.display = 'none';
+}
+
+// (MỚI) Tạo danh sách Thống kê
+function populateStatsList() {
+    statsListContainer.innerHTML = ''; // Xóa cũ
+    
+    // 1. Lấy tất cả từ trong "trí nhớ"
+    const wordsFromProgress = Object.keys(progress).map(wordId => {
+        const wordData = allWords.find(w => w.id === wordId);
+        return {
+            id: wordId,
+            english: wordData ? wordData.english : "Không rõ",
+            vietnamese: wordData ? wordData.vietnamese : "Không rõ",
+            level: progress[wordId].level
+        };
+    });
+    
+    // 2. Sắp xếp: Level cao nhất (đã thuộc) xuống thấp nhất (mới học)
+    wordsFromProgress.sort((a, b) => b.level - a.level);
+    
+    // 3. Tạo HTML
+    wordsFromProgress.forEach(word => {
+        const item = document.createElement('div');
+        item.className = 'stat-item';
+        // (CẬP NHẬT) Thêm data-word để phát âm
+        item.dataset.word = word.english; 
+        
+        item.innerHTML = `
+            <div class="stat-word">
+                ${word.english}
+                <div class="card-phonetic" style="color: #555;">${word.vietnamese}</div>
+            </div>
+            <span class="stat-level stat-level-${word.level}">Level ${word.level}</span>
+        `;
+        
+        // (CẬP NHẬT) Thêm sự kiện click
+        item.addEventListener('click', handleStatItemClick);
+        
+        statsListContainer.appendChild(item);
+    });
+}
+
+// (MỚI) Xử lý nhấn vào mục Thống kê để phát âm
+function handleStatItemClick(event) {
+    const wordToPlay = event.currentTarget.dataset.word;
+    if (wordToPlay) {
+        playAudio(wordToPlay);
+    }
 }
