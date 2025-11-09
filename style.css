@@ -143,10 +143,14 @@ header {
     box-shadow: var(--shadow);
     transition: all 0.2s ease;
     user-select: none;
-    /* (ĐÃ XÓA) Bỏ min-height để thẻ co giãn */
     display: flex;
     align-items: center;
     justify-content: center;
+
+    /* (MỚI) Thêm chiều cao tối thiểu để các thẻ trong một hàng bằng nhau */
+    /* Điều này khắc phục lỗi thẻ Tiếng Anh (2 dòng) cao hơn thẻ Tiếng Việt (1 dòng) */
+    /* Kích thước này đủ cho 2 dòng text và padding */
+    min-height: 54px; 
 }
 .card:not(.disabled):hover {
     transform: translateY(-2px);
